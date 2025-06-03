@@ -3,18 +3,35 @@
  * Admin Settings
  *
  * Handles admin settings and submenus for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ * @version 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Class VitaPro_Appointments_FSE_Admin_Settings
+ *
+ * Handles the registration of admin submenus and settings groups for the plugin.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
 if (!class_exists('VitaPro_Appointments_FSE_Admin_Settings')) {
 
 class VitaPro_Appointments_FSE_Admin_Settings {
 
     /**
-     * Constructor
+     * VitaPro_Appointments_FSE_Admin_Settings constructor.
+     *
+     * Registers admin menu and settings group hooks.
+     *
+     * @since 1.0.0
+     * @uses add_action()
      */
     public function __construct() {
         add_action('admin_menu', array($this, 'add_settings_submenus'));
@@ -27,6 +44,10 @@ class VitaPro_Appointments_FSE_Admin_Settings {
 
     /**
      * Add admin submenus under the main 'vitapro-appointments' menu.
+     *
+     * @since 1.0.0
+     * @uses add_submenu_page()
+     * @return void
      */
     public function add_settings_submenus() {
         $parent_slug = 'vitapro-appointments';
@@ -57,6 +78,10 @@ class VitaPro_Appointments_FSE_Admin_Settings {
     /**
      * Registra o principal grupo de opções do plugin.
      * A função de sanitização para este grupo está em `includes/cpt/settings-page.php`.
+     *
+     * @since 1.0.0
+     * @uses register_setting()
+     * @return void
      */
     public function register_main_settings_group() {
         register_setting(
@@ -70,6 +95,10 @@ class VitaPro_Appointments_FSE_Admin_Settings {
     /**
      * Callback para renderizar a página de Configurações Gerais.
      * Esta função chama a função de renderização de 'includes/cpt/settings-page.php'.
+     *
+     * @since 1.0.0
+     * @uses vitapro_appointments_settings_page_render()
+     * @return void
      */
     public function render_general_settings_page_callback() {
         if (function_exists('vitapro_appointments_settings_page_render')) {
@@ -81,6 +110,9 @@ class VitaPro_Appointments_FSE_Admin_Settings {
 
     /**
      * Callback para renderizar a página de Modelos de Email.
+     *
+     * @since 1.0.0
+     * @return void
      */
     public function render_email_templates_page_callback() {
         ?>

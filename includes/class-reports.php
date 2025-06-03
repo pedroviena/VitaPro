@@ -1,14 +1,25 @@
 <?php
 /**
- * Advanced Reports System
- * 
- * Handles advanced reporting and data export functionality.
+ * Reports
+ *
+ * Handles reporting features for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Class VitaPro_Appointments_FSE_Reports
+ *
+ * Handles reporting features for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
 class VitaPro_Appointments_FSE_Reports {
     
     /**
@@ -438,6 +449,11 @@ class VitaPro_Appointments_FSE_Reports {
             wp_die(__('Security check failed', 'vitapro-appointments-fse'));
         }
         
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
+        
         $report_type = sanitize_text_field($_POST['report_type']);
         $date_range_type = sanitize_text_field($_POST['date_range_type']);
         $start_date = sanitize_text_field($_POST['start_date']);
@@ -467,6 +483,11 @@ class VitaPro_Appointments_FSE_Reports {
     public function export_report() {
         if (!wp_verify_nonce($_POST['nonce'], 'vpa_reports_nonce')) {
             wp_die(__('Security check failed', 'vitapro-appointments-fse'));
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
         }
         
         $report_id = intval($_POST['report_id']);

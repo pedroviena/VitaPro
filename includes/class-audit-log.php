@@ -1,13 +1,12 @@
 <?php
 /**
- * Audit Log System
- * * Handles comprehensive audit logging and monitoring for VitaPro Appointments FSE.
+ * Class VitaPro_Appointments_FSE_Audit_Log
+ *
+ * Handles comprehensive audit logging and monitoring for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
  */
-
-if (!defined('ABSPATH')) {
-    exit;
-}
-
 class VitaPro_Appointments_FSE_Audit_Log {
     
     private $log_levels = array(
@@ -65,11 +64,171 @@ class VitaPro_Appointments_FSE_Audit_Log {
      * Implemente a lógica de rastreamento de ações do administrador aqui.
      */
     public function track_admin_actions() {
-        // TODO: Implementar a lógica para rastrear ações do administrador.
-        // Exemplo: verificar $_POST, $_GET para ações específicas e registrar eventos.
-        // if (isset($_POST['action']) && $_POST['action'] === 'delete-post' && isset($_POST['post_ID'])) {
-        //     // Log post deletion
-        // }
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        // Evitar múltiplos hooks
+        static $hooks_registered = false;
+        if ($hooks_registered) {
+            return;
+        }
+        $hooks_registered = true;
+
+        // CPTs do plugin
+        $plugin_cpts = array('vpa_service', 'vpa_professional', 'vpa_appointment', 'vpa_holiday');
+
+        // Log criação/atualização de posts dos CPTs
+        add_action('save_post', function($post_id, $post, $update) use ($plugin_cpts) {
+            if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+            if (!in_array($post->post_type, $plugin_cpts, true)) return;
+
+            $action = $update ? 'update' : 'create';
+            $object_type = $post->post_type;
+            $user_id = get_current_user_id();
+
+            $old_data = $update ? get_post($post_id, ARRAY_A) : array();
+            $new_data = (array) $post;
+
+            $this->log_event(
+                $object_type . '_' . $action,
+                $action,
+                sprintf(
+                    __('%s %s: %s', 'vitapro-appointments-fse'),
+                    ucfirst($object_type),
+                    $action === 'create' ? __('created', 'vitapro-appointments-fse') : __('updated', 'vitapro-appointments-fse'),
+                    $post->post_title
+                ),
+                array(
+                    'category' => $object_type,
+                    'severity' => 'info',
+                    'user_id' => $user_id,
+                    'object_type' => $object_type,
+                    'object_id' => $post_id,
+                    'old_values' => $old_data,
+                    'new_values' => $new_data,
+                )
+            );
+        }, 10, 3);
+
+        // Log exclusão de posts dos CPTs
+        add_action('before_delete_post', function($post_id) use ($plugin_cpts) {
+            $post = get_post($post_id);
+            if (!$post || !in_array($post->post_type, $plugin_cpts, true)) return;
+
+            $object_type = $post->post_type;
+            $user_id = get_current_user_id();
+
+            $this->log_event(
+                $object_type . '_deleted',
+                'delete',
+                sprintf(
+                    __('%s deleted: %s', 'vitapro-appointments-fse'),
+                    ucfirst($object_type),
+                    $post->post_title
+                ),
+                array(
+                    'category' => $object_type,
+                    'severity' => 'warning',
+                    'user_id' => $user_id,
+                    'object_type' => $object_type,
+                    'object_id' => $post_id,
+                    'old_values' => (array) $post,
+                )
+            );
+        });
+
+        // Log mudanças de status de agendamento (CPT)
+        add_action('transition_post_status', function($new_status, $old_status, $post) use ($plugin_cpts) {
+            if ($post->post_type !== 'vpa_appointment' || $new_status === $old_status) return;
+            $user_id = get_current_user_id();
+
+            $this->log_event(
+                'appointment_status_changed',
+                'status_change',
+                sprintf(
+                    __('Appointment #%d status changed from %s to %s', 'vitapro-appointments-fse'),
+                    $post->ID, $old_status, $new_status
+                ),
+                array(
+                    'category' => 'appointment',
+                    'severity' => $new_status === 'cancelled' ? 'warning' : 'info',
+                    'user_id' => $user_id,
+                    'object_type' => 'appointment',
+                    'object_id' => $post->ID,
+                    'old_values' => array('status' => $old_status),
+                    'new_values' => array('status' => $new_status),
+                )
+            );
+        }, 10, 3);
+
+        // Log alterações de taxonomia dos CPTs
+        add_action('set_object_terms', function($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids) use ($plugin_cpts) {
+            $post = get_post($object_id);
+            if (!$post || !in_array($post->post_type, $plugin_cpts, true)) return;
+            $user_id = get_current_user_id();
+
+            $this->log_event(
+                'taxonomy_updated',
+                'update',
+                sprintf(
+                    __('%s taxonomy "%s" updated for %s', 'vitapro-appointments-fse'),
+                    ucfirst($post->post_type),
+                    $taxonomy,
+                    $post->post_title
+                ),
+                array(
+                    'category' => $post->post_type,
+                    'severity' => 'info',
+                    'user_id' => $user_id,
+                    'object_type' => $post->post_type,
+                    'object_id' => $object_id,
+                    'old_values' => array('term_taxonomy_ids' => $old_tt_ids),
+                    'new_values' => array('term_taxonomy_ids' => $tt_ids),
+                )
+            );
+        }, 10, 6);
+
+        // Log atualização de opções do plugin
+        add_action('update_option', function($option, $old_value, $value) {
+            if (strpos($option, 'vpa_') === 0 || strpos($option, 'vitapro_appointments') === 0) {
+                $user_id = get_current_user_id();
+                $this->log_event(
+                    'settings_changed',
+                    'update',
+                    sprintf(__('Plugin setting "%s" updated', 'vitapro-appointments-fse'), $option),
+                    array(
+                        'category' => 'configuration',
+                        'severity' => 'notice',
+                        'user_id' => $user_id,
+                        'object_type' => 'setting',
+                        'object_id' => 0,
+                        'old_values' => array($option => $old_value),
+                        'new_values' => array($option => $value),
+                    )
+                );
+            }
+        }, 10, 3);
+
+        // Log atualização de perfil de usuário
+        add_action('edit_user_profile_update', function($user_id) {
+            $user = get_userdata($user_id);
+            $current_user = get_current_user_id();
+            $this->log_event(
+                'user_profile_updated',
+                'update',
+                sprintf(__('User profile updated: %s', 'vitapro-appointments-fse'), $user->user_login),
+                array(
+                    'category' => 'user',
+                    'severity' => 'info',
+                    'user_id' => $current_user,
+                    'object_type' => 'user',
+                    'object_id' => $user_id,
+                )
+            );
+        });
+
+        // Log login/logout já são tratados nos métodos da classe.
     }
 
     /**
@@ -209,12 +368,16 @@ class VitaPro_Appointments_FSE_Audit_Log {
         );
         
         $result = $wpdb->insert($table_name, $data); // Não precisa de formatos se todos são strings/auto
+        if ($result === false) {
+            error_log('VitaPro DB Error: ' . $wpdb->last_error . ' on query: ' . $wpdb->last_query);
+            return false;
+        }
         
         if (in_array($options['severity'], array('emergency', 'alert', 'critical'))) {
             // $this->trigger_alert($event_type, $action, $description, $options); // Método trigger_alert não definido
         }
         
-        return $result !== false;
+        return true;
     }
     
     public function log_appointment_created($appointment_id) {
@@ -536,8 +699,16 @@ class VitaPro_Appointments_FSE_Audit_Log {
     }
 
     public function get_live_activity_ajax_handler() {
-        // Este handler precisaria de um nonce específico se não for público
-        // check_ajax_referer('vpa_live_activity_nonce', 'nonce'); 
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
+        if (
+            !isset($_POST['nonce']) ||
+            !wp_verify_nonce(sanitize_key(wp_unslash($_POST['nonce'])), 'vpa_live_activity_nonce')
+        ) {
+            wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
+        }
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'vpa_audit_log';
@@ -580,11 +751,19 @@ class VitaPro_Appointments_FSE_Audit_Log {
 
     // Outros handlers AJAX (export_audit_logs_ajax_handler, clear_audit_logs_ajax_handler) precisam ser implementados
     public function export_audit_logs_ajax_handler() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
         // Implementar lógica de exportação
         wp_send_json_error('Not implemented yet');
     }
 
     public function clear_audit_logs_ajax_handler() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
         // Implementar lógica para limpar logs (com confirmação!)
         wp_send_json_error('Not implemented yet');
     }
@@ -675,27 +854,11 @@ class VitaPro_Appointments_FSE_Audit_Log {
     
     private function get_appointment_data_for_log($appointment_id) {
         global $wpdb;
-        // Supondo que os dados do agendamento venham da tabela customizada
         $table_name = $wpdb->prefix . 'vpa_appointments';
         $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $appointment_id), ARRAY_A);
-        
+
         if (!$appointment) {
-            // Ou talvez do post type se a tabela não for a fonte primária
-            $post = get_post($appointment_id);
-            if ($post && $post->post_type === 'vpa_appointment') {
-                $appointment = array(
-                    'id' => $post->ID,
-                    'customer_name' => get_post_meta($post->ID, '_vpa_appointment_patient_name', true),
-                    'service_id' => get_post_meta($post->ID, '_vpa_appointment_service_id', true),
-                    'professional_id' => get_post_meta($post->ID, '_vpa_appointment_professional_id', true),
-                    'appointment_date' => get_post_meta($post->ID, '_vpa_appointment_date', true),
-                    'appointment_time' => get_post_meta($post->ID, '_vpa_appointment_time', true),
-                    'status' => get_post_meta($post->ID, '_vpa_appointment_status', true),
-                    // Adicionar outros campos relevantes
-                );
-            } else {
-                return array('id' => $appointment_id, 'error' => 'Data not found');
-            }
+            return array('id' => $appointment_id, 'error' => 'Data not found');
         }
         return $appointment;
     }

@@ -35,6 +35,9 @@ add_action( 'init', 'vitapro_appointments_register_my_appointments_block' );
 
 /**
  * Render the My Appointments block.
+ *
+ * @param array $attributes Block attributes.
+ * @return string HTML output.
  */
 function vitapro_appointments_render_my_appointments_block( $attributes, $content ) {
     if ( ! is_user_logged_in() ) {

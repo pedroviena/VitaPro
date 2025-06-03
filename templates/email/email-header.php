@@ -9,7 +9,14 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-$styles = include( VITAPRO_APPOINTMENTS_PLUGIN_DIR . 'templates/email/email-styles.php' );
+// Exemplo de inclusão de estilos:
+$styles_path = VITAPRO_APPOINTMENTS_FSE_PATH . 'templates/email/email-styles.php';
+if (file_exists($styles_path)) {
+    include $styles_path;
+} else {
+    error_log('VitaPro Error: Template file not found: ' . $styles_path);
+    // Opcional: echo '<style>/* Minimal fallback styles here */</style>';
+}
 ?>
 <!DOCTYPE html>
 <html>

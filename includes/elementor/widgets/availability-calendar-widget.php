@@ -1,13 +1,26 @@
 <?php
 /**
- * Elementor Availability Calendar Widget
+ * Availability Calendar Widget
+ *
+ * Elementor widget for VitaPro Appointments Availability Calendar.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class VitaPro_Elementor_Availability_Calendar_Widget extends \Elementor\Widget_Base {
+/**
+ * Class Availability_Calendar_Widget
+ *
+ * Elementor widget for VitaPro Appointments Availability Calendar.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
+class Availability_Calendar_Widget extends \Elementor\Widget_Base {
     
     /**
      * Get widget name
@@ -47,7 +60,7 @@ class VitaPro_Elementor_Availability_Calendar_Widget extends \Elementor\Widget_B
     /**
      * Register widget controls
      */
-    protected function _register_controls() {
+    public function register_controls() {
         
         // Content Section
         $this->start_controls_section(
@@ -260,7 +273,7 @@ class VitaPro_Elementor_Availability_Calendar_Widget extends \Elementor\Widget_B
     /**
      * Render widget output in the editor
      */
-    protected function _content_template() {
+    protected function content_template() {
         ?>
         <div class="vpa-elementor-preview">
             <div class="vpa-elementor-preview-title">

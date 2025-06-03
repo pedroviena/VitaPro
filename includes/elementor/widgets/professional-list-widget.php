@@ -1,13 +1,26 @@
 <?php
 /**
- * Elementor Professional List Widget
+ * Professional List Widget
+ *
+ * Elementor widget for VitaPro Appointments Professional List.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class VitaPro_Elementor_Professional_List_Widget extends \Elementor\Widget_Base {
+/**
+ * Class Professional_List_Widget
+ *
+ * Elementor widget for VitaPro Appointments Professional List.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
+class Professional_List_Widget extends \Elementor\Widget_Base {
     
     /**
      * Get widget name
@@ -47,7 +60,7 @@ class VitaPro_Elementor_Professional_List_Widget extends \Elementor\Widget_Base 
     /**
      * Register widget controls
      */
-    protected function _register_controls() {
+    public function register_controls() {
         
         // Content Section
         $this->start_controls_section(
@@ -346,7 +359,7 @@ class VitaPro_Elementor_Professional_List_Widget extends \Elementor\Widget_Base 
     /**
      * Render widget output in the editor
      */
-    protected function _content_template() {
+    protected function content_template() {
         ?>
         <div class="vpa-elementor-preview">
             <div class="vpa-elementor-preview-title">

@@ -10,7 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register Appointment Custom Post Type.
+ * Register the Appointment custom post type.
+ *
+ * @return void
+ * @uses register_post_type()
  */
 function vitapro_appointments_register_appointment_cpt() {
     $labels = array(
@@ -68,9 +71,13 @@ function vitapro_appointments_register_appointment_cpt() {
 add_action( 'init', 'vitapro_appointments_register_appointment_cpt', 0 );
 
 /**
- * Add meta boxes for Appointment CPT.
+ * Add meta boxes for the Appointment CPT.
+ *
+ * @param string $post_type The current post type.
+ * @return void
+ * @uses add_meta_box()
  */
-function vitapro_add_appointment_meta_boxes() {
+function vitapro_add_appointment_meta_boxes($post_type) {
     add_meta_box(
         'vpa_appointment_details',
         __( 'Appointment Details', 'vitapro-appointments-fse' ),
@@ -83,7 +90,11 @@ function vitapro_add_appointment_meta_boxes() {
 add_action( 'add_meta_boxes', 'vitapro_add_appointment_meta_boxes' );
 
 /**
- * Render Appointment Details meta box.
+ * Render the Appointment Details meta box.
+ *
+ * @param WP_Post $post The current post object.
+ * @return void
+ * @uses get_post_meta()
  */
 function vitapro_render_appointment_details_meta_box( $post ) {
     wp_nonce_field( 'vitapro_appointment_meta_box', 'vitapro_appointment_meta_box_nonce' );
@@ -231,7 +242,11 @@ function vitapro_render_appointment_details_meta_box( $post ) {
 }
 
 /**
- * Save Appointment meta data.
+ * Save the Appointment meta data when the post is saved.
+ *
+ * @param int $post_id The ID of the post being saved.
+ * @return void
+ * @uses update_post_meta()
  */
 function vitapro_save_appointment_meta_data( $post_id, $post ) {
     if ( ! isset( $_POST['vitapro_appointment_meta_box_nonce'] ) ) {
@@ -322,6 +337,9 @@ add_action( 'save_post', 'vitapro_save_appointment_meta_data', 10, 2 );
 
 /**
  * Customize appointment list columns.
+ *
+ * @param array $columns The existing columns.
+ * @return array Modified columns.
  */
 function vitapro_set_appointment_columns( $columns ) {
     $columns = array(
@@ -339,7 +357,11 @@ function vitapro_set_appointment_columns( $columns ) {
 add_filter( 'manage_vpa_appointment_posts_columns', 'vitapro_set_appointment_columns' );
 
 /**
- * Render custom appointment list columns.
+ * Render custom column content for the Appointment CPT.
+ *
+ * @param string $column The column name.
+ * @param int $post_id The post ID.
+ * @return void
  */
 function vitapro_render_appointment_columns( $column, $post_id ) {
     switch ( $column ) {

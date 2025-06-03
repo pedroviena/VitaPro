@@ -1,18 +1,35 @@
 <?php
 /**
- * Real-time Notifications System
- * 
- * Handles real-time notifications and alerts for VitaPro Appointments FSE.
+ * Notifications
+ *
+ * Handles notification creation, management, and delivery for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ * @version 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Class VitaPro_Appointments_FSE_Notifications
+ *
+ * Provides methods to create, read, update, and dismiss notifications for users and admins.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
 class VitaPro_Appointments_FSE_Notifications {
-    
+
     /**
-     * Constructor
+     * Constructor.
+     *
+     * Registers hooks for notification events.
+     *
+     * @since 1.0.0
+     * @uses add_action()
      */
     public function __construct() {
         add_action('init', array($this, 'init_notifications'));
@@ -34,7 +51,7 @@ class VitaPro_Appointments_FSE_Notifications {
         add_action('wp_ajax_vpa_register_push_subscription', array($this, 'register_push_subscription'));
         add_action('wp_ajax_vpa_send_push_notification', array($this, 'send_push_notification'));
     }
-    
+
     /**
      * Initialize notifications system
      */
@@ -207,10 +224,11 @@ class VitaPro_Appointments_FSE_Notifications {
             array('%d', '%d')
         );
         
-        if ($result !== false) {
-            wp_send_json_success();
-        } else {
+        if ($result === false) {
+            error_log('VitaPro DB Error: ' . $wpdb->last_error . ' on query: ' . $wpdb->last_query);
             wp_send_json_error(__('Failed to mark notification as read', 'vitapro-appointments-fse'));
+        } else {
+            wp_send_json_success();
         }
     }
     
@@ -239,15 +257,27 @@ class VitaPro_Appointments_FSE_Notifications {
             array('%d', '%d')
         );
         
-        if ($result !== false) {
-            wp_send_json_success();
-        } else {
+        if ($result === false) {
+            error_log('VitaPro DB Error: ' . $wpdb->last_error . ' on query: ' . $wpdb->last_query);
             wp_send_json_error(__('Failed to dismiss notification', 'vitapro-appointments-fse'));
+        } else {
+            wp_send_json_success();
         }
     }
     
     /**
-     * Create notification
+     * Create a new notification for a user.
+     *
+     * @param int $user_id User ID.
+     * @param string $type Notification type.
+     * @param string $title Notification title.
+     * @param string $message Notification message.
+     * @param array $data Optional. Additional data for the notification.
+     * @param string $priority Optional. Notification priority (low, medium, high, urgent). Default is medium.
+     * @param string $expires_at Optional. Expiration date/time for the notification in Y-m-d H:i:s format. Default is null.
+     * @return int|false Notification ID on success, false on failure.
+     * @since 1.0.0
+     * @uses $wpdb
      */
     public function create_notification($user_id, $type, $title, $message, $data = array(), $priority = 'medium', $expires_at = null) {
         global $wpdb;
@@ -268,25 +298,26 @@ class VitaPro_Appointments_FSE_Notifications {
             array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
         );
         
-        if ($result) {
-            $notification_id = $wpdb->insert_id;
-            
-            // Send real-time notification
-            $this->send_realtime_notification($user_id, array(
-                'id' => $notification_id,
-                'type' => $type,
-                'title' => $title,
-                'message' => $message,
-                'priority' => $priority
-            ));
-            
-            // Send push notification if enabled
-            $this->maybe_send_push_notification($user_id, $title, $message, $data);
-            
-            return $notification_id;
+        if ($result === false) {
+            error_log('VitaPro DB Error: ' . $wpdb->last_error . ' on query: ' . $wpdb->last_query);
+            return false;
         }
         
-        return false;
+        $notification_id = $wpdb->insert_id;
+        
+        // Send real-time notification
+        $this->send_realtime_notification($user_id, array(
+            'id' => $notification_id,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'priority' => $priority
+        ));
+        
+        // Send push notification if enabled
+        $this->maybe_send_push_notification($user_id, $title, $message, $data);
+        
+        return $notification_id;
     }
     
     /**

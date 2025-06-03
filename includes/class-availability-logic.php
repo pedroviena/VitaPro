@@ -146,7 +146,7 @@ class VitaPro_Appointments_FSE_Availability_Logic {
             return $available_slots;
         }
 
-        $options = get_option('vitapro_appointments_settings', array()); // Use get_option consistently
+        $options = get_option('vitapro_appointments_main_settings', array()); // Use get_option consistently
         $interval = isset($options['time_slot_interval']) ? (int)$options['time_slot_interval'] : 30;
         $buffer_time = (int)get_post_meta($service_id, '_vpa_service_buffer_time', true); // Buffer específico do serviço
         $total_duration_for_slot = $duration_needed + $buffer_time;
@@ -220,35 +220,6 @@ class VitaPro_Appointments_FSE_Availability_Logic {
         global $wpdb; // Adicionado global $wpdb
         $table_name = $wpdb->prefix . 'vpa_appointments'; // Definido aqui
 
-        $meta_query_args = array(
-            'relation' => 'AND',
-            array(
-                'key'     => '_vpa_appointment_date',
-                'value'   => $date_str,
-                'compare' => '=',
-            ),
-            array(
-                'key'     => '_vpa_appointment_status',
-                'value'   => array('confirmed', 'pending'),
-                'compare' => 'IN',
-            ),
-        );
-
-        if ($professional_id) {
-            $meta_query_args[] = array(
-                'key'     => '_vpa_appointment_professional_id',
-                'value'   => $professional_id,
-                'compare' => '=',
-            );
-        }
-        // Se professional_id for 0 (qualquer um), não adicionar filtro de profissional
-        // mas isso significa que um slot é "reservado" se *qualquer* profissional estiver ocupado,
-        // o que pode não ser o desejado. A reserva deve ser específica para um profissional.
-        // Se o frontend permite "qualquer profissional", a lógica de reserva precisaria encontrar
-        // um profissional disponível específico para aquele slot.
-
-
-        // Para a tabela customizada $wpdb->prefix . 'vpa_appointments':
         $query_conditions = array(
             $wpdb->prepare("appointment_date = %s", $date_str),
             $wpdb->prepare("status IN (%s, %s)", 'confirmed', 'pending')
@@ -296,11 +267,7 @@ class VitaPro_Appointments_FSE_Availability_Logic {
     private function get_service_duration($service_id) {
         $duration = get_post_meta($service_id, '_vpa_service_duration', true);
         if (empty($duration) || !is_numeric($duration)) {
-            // Usar a função helper se existir, ou get_option diretamente
-            if (function_exists('vitapro_appointments_get_option')) {
-                return (int)vitapro_appointments_get_option('default_appointment_duration', 60);
-            }
-            $options = get_option('vitapro_appointments_settings', array());
+            $options = get_option('vitapro_appointments_main_settings', array());
             return isset($options['default_appointment_duration']) ? (int)$options['default_appointment_duration'] : 60;
         }
         return (int)$duration;
@@ -356,15 +323,9 @@ class VitaPro_Appointments_FSE_Availability_Logic {
             'break_start' => '',
             'break_end'   => '',
         );
-        // Usar a função helper se existir, ou get_option diretamente
-        if (function_exists('vitapro_appointments_get_option')) {
-            $default_schedule['start'] = vitapro_appointments_get_option('default_opening_time', '09:00');
-            $default_schedule['end'] = vitapro_appointments_get_option('default_closing_time', '17:00');
-        } else {
-            $options = get_option('vitapro_appointments_settings', array());
-            if (isset($options['default_opening_time'])) $default_schedule['start'] = $options['default_opening_time'];
-            if (isset($options['default_closing_time'])) $default_schedule['end'] = $options['default_closing_time'];
-        }
+        $options = get_option('vitapro_appointments_main_settings', array());
+        if (isset($options['default_opening_time'])) $default_schedule['start'] = $options['default_opening_time'];
+        if (isset($options['default_closing_time'])) $default_schedule['end'] = $options['default_closing_time'];
 
         if ($professional_id) {
             $professional_schedule_meta = get_post_meta($professional_id, '_vpa_professional_schedule', true);

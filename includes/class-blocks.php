@@ -517,37 +517,113 @@ class VitaPro_Appointments_FSE_Blocks {
         if (!is_user_logged_in()) {
             return '<p>' . __('Please log in to view your appointments.', 'vitapro-appointments-fse') . '</p>';
         }
-        
+
         $show_upcoming = isset($attributes['showUpcoming']) ? $attributes['showUpcoming'] : true;
         $show_past = isset($attributes['showPast']) ? $attributes['showPast'] : true;
         $allow_cancellation = isset($attributes['allowCancellation']) ? $attributes['allowCancellation'] : true;
         $upcoming_limit = isset($attributes['upcomingLimit']) ? intval($attributes['upcomingLimit']) : 10;
         $past_limit = isset($attributes['pastLimit']) ? intval($attributes['pastLimit']) : 10;
-        
+
         $current_user = wp_get_current_user();
         $user_email = $current_user->user_email;
-        
+
         ob_start();
         ?>
         <div class="vpa-my-appointments">
             <?php if ($show_upcoming): ?>
             <div class="vpa-appointments-section vpa-upcoming-appointments">
                 <h3 class="vpa-appointments-heading"><?php _e('Upcoming Appointments', 'vitapro-appointments-fse'); ?></h3>
-                <?php $this->render_user_appointments($user_email, 'upcoming', $upcoming_limit, $allow_cancellation); ?>
+                <?php $this->render_user_appointments_custom_table($user_email, 'upcoming', $upcoming_limit, $allow_cancellation); ?>
             </div>
             <?php endif; ?>
-            
             <?php if ($show_past): ?>
             <div class="vpa-appointments-section vpa-past-appointments">
                 <h3 class="vpa-appointments-heading"><?php _e('Past Appointments', 'vitapro-appointments-fse'); ?></h3>
-                <?php $this->render_user_appointments($user_email, 'past', $past_limit, false); ?>
+                <?php $this->render_user_appointments_custom_table($user_email, 'past', $past_limit, false); ?>
             </div>
             <?php endif; ?>
         </div>
         <?php
         return ob_get_clean();
     }
-    
+
+    private function render_user_appointments_custom_table($user_email, $type = 'upcoming', $limit = 10, $allow_cancellation = true) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'vpa_appointments';
+        $current_date = current_time('Y-m-d');
+        $current_time = current_time('H:i:s');
+
+        if ($type === 'upcoming') {
+            $where_clause = "WHERE customer_email = %s AND (appointment_date > %s OR (appointment_date = %s AND appointment_time > %s)) AND status != 'cancelled'";
+            $order_clause = "ORDER BY appointment_date ASC, appointment_time ASC";
+            $prepare_values = array($user_email, $current_date, $current_date, $current_time);
+        } else {
+            $where_clause = "WHERE customer_email = %s AND (appointment_date < %s OR (appointment_date = %s AND appointment_time <= %s))";
+            $order_clause = "ORDER BY appointment_date DESC, appointment_time DESC";
+            $prepare_values = array($user_email, $current_date, $current_date, $current_time);
+        }
+
+        $sql = "SELECT * FROM {$table_name} {$where_clause} {$order_clause} LIMIT %d";
+        $prepare_values[] = $limit;
+
+        $appointments = $wpdb->get_results($wpdb->prepare($sql, $prepare_values));
+
+        if (empty($appointments)) {
+            echo '<p>' . ($type === 'upcoming' ? __('No upcoming appointments.', 'vitapro-appointments-fse') : __('No past appointments.', 'vitapro-appointments-fse')) . '</p>';
+            return;
+        }
+
+        echo '<div class="vpa-appointments-list">';
+        foreach ($appointments as $appointment) {
+            $service_title = get_the_title($appointment->service_id);
+            $professional_title = get_the_title($appointment->professional_id);
+            $options = get_option('vitapro_appointments_main_settings', array());
+            $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
+            $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
+            $formatted_date = date_i18n($date_format, strtotime($appointment->appointment_date));
+            $formatted_time = date_i18n($time_format, strtotime($appointment->appointment_time));
+            
+            echo '<div class="vpa-appointment-card vpa-status-' . esc_attr($appointment->status) . '">';
+            echo '<div class="vpa-appointment-header">';
+            echo '<h4 class="vpa-appointment-service">' . esc_html($service_title) . '</h4>';
+            echo '<span class="vpa-appointment-status vpa-status-' . esc_attr($appointment->status) . '">' . esc_html(ucfirst($appointment->status)) . '</span>';
+            echo '</div>';
+            
+            echo '<div class="vpa-appointment-details">';
+            echo '<div class="vpa-detail-row">';
+            echo '<span class="vpa-detail-label">' . __('Professional:', 'vitapro-appointments-fse') . '</span>';
+            echo '<span class="vpa-detail-value">' . esc_html($professional_title) . '</span>';
+            echo '</div>';
+            
+            echo '<div class="vpa-detail-row">';
+            echo '<span class="vpa-detail-label">' . __('Date:', 'vitapro-appointments-fse') . '</span>';
+            echo '<span class="vpa-detail-value">' . esc_html($formatted_date) . '</span>';
+            echo '</div>';
+            
+            echo '<div class="vpa-detail-row">';
+            echo '<span class="vpa-detail-label">' . __('Time:', 'vitapro-appointments-fse') . '</span>';
+            echo '<span class="vpa-detail-value">' . esc_html($formatted_time) . '</span>';
+            echo '</div>';
+            
+            if (!empty($appointment->notes)) {
+                echo '<div class="vpa-detail-row">';
+                echo '<span class="vpa-detail-label">' . __('Notes:', 'vitapro-appointments-fse') . '</span>';
+                echo '<span class="vpa-detail-value">' . esc_html($appointment->notes) . '</span>';
+                echo '</div>';
+            }
+            echo '</div>';
+            
+            if ($type === 'upcoming' && $allow_cancellation && in_array($appointment->status, array('pending', 'confirmed'))) {
+                echo '<div class="vpa-appointment-actions">';
+                echo '<button type="button" class="vpa-btn vpa-btn-cancel" data-appointment-id="' . esc_attr($appointment->id) . '">' . __('Cancel Appointment', 'vitapro-appointments-fse') . '</button>';
+                echo '</div>';
+            }
+            
+            echo '</div>';
+        }
+        echo '</div>';
+    }
+
     /**
      * Render service selection
      */
@@ -712,85 +788,5 @@ class VitaPro_Appointments_FSE_Blocks {
             
             echo '</div>';
         }
-    }
-    
-    /**
-     * Render user appointments
-     */
-    private function render_user_appointments($user_email, $type = 'upcoming', $limit = 10, $allow_cancellation = true) {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . 'vpa_appointments';
-        $current_date = current_time('Y-m-d');
-        $current_time = current_time('H:i:s');
-        
-        if ($type === 'upcoming') {
-            $where_clause = "WHERE customer_email = %s AND (appointment_date > %s OR (appointment_date = %s AND appointment_time > %s)) AND status != 'cancelled'";
-            $order_clause = "ORDER BY appointment_date ASC, appointment_time ASC";
-            $prepare_values = array($user_email, $current_date, $current_date, $current_time);
-        } else {
-            $where_clause = "WHERE customer_email = %s AND (appointment_date &lt; %s OR (appointment_date = %s AND appointment_time &lt;= %s))";
-            $order_clause = "ORDER BY appointment_date DESC, appointment_time DESC";
-            $prepare_values = array($user_email, $current_date, $current_date, $current_time);
-        }
-        
-        $sql = "SELECT * FROM {$table_name} {$where_clause} {$order_clause} LIMIT %d";
-        $prepare_values[] = $limit;
-        
-        $appointments = $wpdb->get_results($wpdb->prepare($sql, $prepare_values));
-        
-        if (empty($appointments)) {
-            echo '<p>' . ($type === 'upcoming' ? __('No upcoming appointments.', 'vitapro-appointments-fse') : __('No past appointments.', 'vitapro-appointments-fse')) . '</p>';
-            return;
-        }
-        
-        echo '<div class="vpa-appointments-list">';
-        foreach ($appointments as $appointment) {
-            $service_title = get_the_title($appointment->service_id);
-            $professional_title = get_the_title($appointment->professional_id);
-            $date_format = get_option('date_format');
-            $time_format = get_option('time_format');
-            $formatted_date = date_i18n($date_format, strtotime($appointment->appointment_date));
-            $formatted_time = date_i18n($time_format, strtotime($appointment->appointment_time));
-            
-            echo '<div class="vpa-appointment-card vpa-status-' . esc_attr($appointment->status) . '">';
-            echo '<div class="vpa-appointment-header">';
-            echo '<h4 class="vpa-appointment-service">' . esc_html($service_title) . '</h4>';
-            echo '<span class="vpa-appointment-status vpa-status-' . esc_attr($appointment->status) . '">' . esc_html(ucfirst($appointment->status)) . '</span>';
-            echo '</div>';
-            
-            echo '<div class="vpa-appointment-details">';
-            echo '<div class="vpa-detail-row">';
-            echo '<span class="vpa-detail-label">' . __('Professional:', 'vitapro-appointments-fse') . '</span>';
-            echo '<span class="vpa-detail-value">' . esc_html($professional_title) . '</span>';
-            echo '</div>';
-            
-            echo '<div class="vpa-detail-row">';
-            echo '<span class="vpa-detail-label">' . __('Date:', 'vitapro-appointments-fse') . '</span>';
-            echo '<span class="vpa-detail-value">' . esc_html($formatted_date) . '</span>';
-            echo '</div>';
-            
-            echo '<div class="vpa-detail-row">';
-            echo '<span class="vpa-detail-label">' . __('Time:', 'vitapro-appointments-fse') . '</span>';
-            echo '<span class="vpa-detail-value">' . esc_html($formatted_time) . '</span>';
-            echo '</div>';
-            
-            if (!empty($appointment->notes)) {
-                echo '<div class="vpa-detail-row">';
-                echo '<span class="vpa-detail-label">' . __('Notes:', 'vitapro-appointments-fse') . '</span>';
-                echo '<span class="vpa-detail-value">' . esc_html($appointment->notes) . '</span>';
-                echo '</div>';
-            }
-            echo '</div>';
-            
-            if ($type === 'upcoming' && $allow_cancellation && in_array($appointment->status, array('pending', 'confirmed'))) {
-                echo '<div class="vpa-appointment-actions">';
-                echo '<button type="button" class="vpa-btn vpa-btn-cancel" data-appointment-id="' . esc_attr($appointment->id) . '">' . __('Cancel Appointment', 'vitapro-appointments-fse') . '</button>';
-                echo '</div>';
-            }
-            
-            echo '</div>';
-        }
-        echo '</div>';
     }
 }

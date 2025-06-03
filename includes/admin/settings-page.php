@@ -123,7 +123,7 @@ function vitapro_appointments_register_settings() {
             'id' => 'patient_cancellation_buffer_hours',
             'default' => 48,
             'desc' => __( 'Minimum hours before the appointment that a patient can cancel.', 'vitapro-appointments-fse' ),
-            'option_group' => 'vitapro_appointments_settings'
+            'option_group' => 'vitapro_appointments_settings' 
         )
     );
 
@@ -630,8 +630,9 @@ function vitapro_appointments_settings_sanitize($input) {
 
 
 /**
- * Render a página principal de configurações.
- * Chamada pela classe VitaPro_Appointments_FSE_Admin_Settings.
+ * Render the VitaPro Appointments settings page.
+ *
+ * @return void
  */
 function vitapro_appointments_settings_page_render() {
     ?>

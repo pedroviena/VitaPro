@@ -1065,12 +1065,16 @@ class VitaPro_Appointments_FSE_Settings_Page {
      * Save settings
      */
     public function save_settings() {
-        if (!wp_verify_nonce($_POST['nonce'], 'vpa_settings_nonce')) {
-            wp_die(__('Security check failed', 'vitapro-appointments-fse'));
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
         }
         
-        if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'vitapro-appointments-fse'));
+        if (
+            !isset($_POST['nonce']) ||
+            !wp_verify_nonce(sanitize_key(wp_unslash($_POST['nonce'])), 'vpa_settings_nonce')
+        ) {
+            wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
         }
         
         // Process and save all settings
@@ -1148,12 +1152,15 @@ class VitaPro_Appointments_FSE_Settings_Page {
      * Export settings
      */
     public function export_settings() {
-        if (!wp_verify_nonce($_GET['nonce'], 'vpa_settings_nonce')) {
-            wp_die(__('Security check failed', 'vitapro-appointments-fse'));
-        }
-        
         if (!current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'vitapro-appointments-fse'));
+        }
+        
+        if (
+            !isset($_GET['nonce']) ||
+            !wp_verify_nonce(sanitize_key(wp_unslash($_GET['nonce'])), 'vpa_settings_nonce')
+        ) {
+            wp_die(__('Security check failed', 'vitapro-appointments-fse'));
         }
         
         // Get all VitaPro settings

@@ -8,6 +8,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Class VitaPro_Appointments_FSE_Frontend_Actions
+ *
+ * Handles frontend actions for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
 class VitaPro_Appointments_FSE_Frontend_Actions {
     
     private $email_functions_instance; // Adicionado
@@ -45,7 +53,6 @@ class VitaPro_Appointments_FSE_Frontend_Actions {
      * Process patient appointment cancellation.
      */
     private function process_patient_cancellation() {
-        // ... (lógica de verificação de nonce, appointment, permissão, etc. permanece a mesma) ...
         if (!isset($_GET['appointment_id']) || !isset($_GET['nonce'])) {
             return;
         }
@@ -57,15 +64,12 @@ class VitaPro_Appointments_FSE_Frontend_Actions {
             wp_die(__('Security check failed.', 'vitapro-appointments-fse'));
         }
 
-        $appointment = get_post($appointment_id); // Ou buscar da sua tabela customizada
-        if (!$appointment || ($appointment->post_type !== 'vpa_appointment' && !$this->get_appointment_from_custom_table($appointment_id) )) {
+        $appointment = $this->get_appointment_from_custom_table($appointment_id);
+        if (!$appointment) {
             wp_die(__('Appointment not found.', 'vitapro-appointments-fse'));
         }
-        
-        // Se estiver usando a tabela customizada, pegue os dados dela.
-        $appointment_data_from_table = $this->get_appointment_from_custom_table($appointment_id);
-        $patient_email_meta = $appointment_data_from_table ? $appointment_data_from_table->customer_email : get_post_meta($appointment_id, '_vpa_appointment_patient_email', true);
-        $old_status_meta = $appointment_data_from_table ? $appointment_data_from_table->status : get_post_meta($appointment_id, '_vpa_appointment_status', true);
+        $patient_email_meta = $appointment->customer_email;
+        $old_status_meta = $appointment->status;
 
 
         // Idealmente, vitapro_can_patient_cancel_appointment seria um método de Availability_Logic ou desta classe.
@@ -92,8 +96,6 @@ class VitaPro_Appointments_FSE_Frontend_Actions {
             array('status' => 'cancelled', 'updated_at' => current_time('mysql', 1)),
             array('id' => $appointment_id) // Assumindo que o ID do post é o ID da tabela
         );
-        // E também no post meta se você ainda usa CPT para alguma coisa
-        update_post_meta($appointment_id, '_vpa_appointment_status', 'cancelled');
 
 
         // A classe VitaPro_Appointments_FSE_Email_Functions já escuta a ação 'vitapro_appointment_status_changed'.

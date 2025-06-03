@@ -9,6 +9,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Class VitaPro_Appointments_FSE_Custom_Post_Types
+ *
+ * Registers and manages custom post types for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
 class VitaPro_Appointments_FSE_Custom_Post_Types {
 
     /**
@@ -76,7 +84,11 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
                 'add_new' => __('Add New Professional', 'vitapro-appointments-fse'), // Alterado
                 'add_new_item' => __('Add New Professional', 'vitapro-appointments-fse'),
                 'edit_item' => __('Edit Professional', 'vitapro-appointments-fse'),
-                // ... (resto dos labels como estavam)
+                'new_item' => __('New Professional', 'vitapro-appointments-fse'),
+                'view_item' => __('View Professional', 'vitapro-appointments-fse'),
+                'search_items' => __('Search Professionals', 'vitapro-appointments-fse'),
+                'not_found' => __('No professionals found', 'vitapro-appointments-fse'),
+                'not_found_in_trash' => __('No professionals found in trash', 'vitapro-appointments-fse'),
                 'menu_name' => __('Professionals', 'vitapro-appointments-fse'),
             ),
             'public' => true,
@@ -101,7 +113,12 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
                 'singular_name' => __('Appointment', 'vitapro-appointments-fse'),
                 'add_new' => __('Add New Appointment', 'vitapro-appointments-fse'), // Alterado
                 'add_new_item' => __('Add New Appointment', 'vitapro-appointments-fse'),
-                // ... (resto dos labels)
+                'edit_item' => __('Edit Appointment', 'vitapro-appointments-fse'),
+                'new_item' => __('New Appointment', 'vitapro-appointments-fse'),
+                'view_item' => __('View Appointment', 'vitapro-appointments-fse'),
+                'search_items' => __('Search Appointments', 'vitapro-appointments-fse'),
+                'not_found' => __('No appointments found', 'vitapro-appointments-fse'),
+                'not_found_in_trash' => __('No appointments found in trash', 'vitapro-appointments-fse'),
                 'menu_name' => __('Appointments', 'vitapro-appointments-fse'),
             ),
             'public' => false, // Geralmente agendamentos não são públicos
@@ -125,7 +142,13 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
                 'name' => __('Holidays', 'vitapro-appointments-fse'),
                 'singular_name' => __('Holiday', 'vitapro-appointments-fse'),
                 'add_new' => __('Add New Holiday', 'vitapro-appointments-fse'), // Alterado
-                // ... (resto dos labels)
+                'add_new_item' => __('Add New Holiday', 'vitapro-appointments-fse'),
+                'edit_item' => __('Edit Holiday', 'vitapro-appointments-fse'),
+                'new_item' => __('New Holiday', 'vitapro-appointments-fse'),
+                'view_item' => __('View Holiday', 'vitapro-appointments-fse'),
+                'search_items' => __('Search Holidays', 'vitapro-appointments-fse'),
+                'not_found' => __('No holidays found', 'vitapro-appointments-fse'),
+                'not_found_in_trash' => __('No holidays found in trash', 'vitapro-appointments-fse'),
                 'menu_name' => __('Holidays', 'vitapro-appointments-fse'),
             ),
             'public' => false,
@@ -203,8 +226,7 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
         switch ($column) {
             case 'price':
                 $price = get_post_meta($post_id, '_vpa_service_price', true);
-                // Obter símbolo da moeda das opções do plugin
-                $options = get_option('vitapro_appointments_settings'); // Ajustar nome da opção se necessário
+                $options = get_option('vitapro_appointments_main_settings', array());
                 $currency_symbol = isset($options['currency_symbol']) ? $options['currency_symbol'] : '$';
                 echo !empty($price) ? esc_html($currency_symbol . number_format_i18n(floatval($price), 2)) : '—';
                 break;
@@ -291,7 +313,7 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
             case 'vpa_date_time':
                 $date = get_post_meta($post_id, '_vpa_appointment_date', true);
                 $time = get_post_meta($post_id, '_vpa_appointment_time', true);
-                $options = get_option('vitapro_appointments_settings'); // Ajustar nome da opção
+                $options = get_option('vitapro_appointments_main_settings', array());
                 $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
                 $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
 
@@ -340,7 +362,7 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
         switch ($column) {
             case 'vpa_holiday_date':
                 $date = get_post_meta($post_id, '_vpa_holiday_date', true);
-                $options = get_option('vitapro_appointments_settings');
+                $options = get_option('vitapro_appointments_main_settings', array());
                 $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
                 echo $date ? esc_html(date_i18n($date_format, strtotime($date))) : '—';
                 break;

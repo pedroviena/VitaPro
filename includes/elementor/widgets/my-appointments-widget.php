@@ -1,13 +1,26 @@
 <?php
 /**
- * Elementor My Appointments Widget
+ * My Appointments Widget
+ *
+ * Elementor widget for VitaPro Appointments "My Appointments" block.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class VitaPro_Elementor_My_Appointments_Widget extends \Elementor\Widget_Base {
+/**
+ * Class My_Appointments_Widget
+ *
+ * Elementor widget for VitaPro Appointments "My Appointments" block.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
+class My_Appointments_Widget extends \Elementor\Widget_Base {
     
     /**
      * Get widget name
@@ -47,7 +60,7 @@ class VitaPro_Elementor_My_Appointments_Widget extends \Elementor\Widget_Base {
     /**
      * Register widget controls
      */
-    protected function _register_controls() {
+    public function register_controls() {
         
         // Content Section
         $this->start_controls_section(
@@ -333,7 +346,7 @@ class VitaPro_Elementor_My_Appointments_Widget extends \Elementor\Widget_Base {
     /**
      * Render widget output in the editor
      */
-    protected function _content_template() {
+    protected function content_template() {
         ?>
         <div class="vpa-elementor-preview">
             <div class="vpa-elementor-preview-title">

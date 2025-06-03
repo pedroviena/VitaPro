@@ -10,7 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register Professional Custom Post Type.
+ * Register the Professional custom post type.
+ *
+ * @return void
+ * @uses register_post_type()
  */
 function vitapro_appointments_register_professional_cpt() {
     $labels = array(
@@ -68,9 +71,13 @@ function vitapro_appointments_register_professional_cpt() {
 add_action( 'init', 'vitapro_appointments_register_professional_cpt', 0 );
 
 /**
- * Add meta boxes for Professional CPT.
+ * Add meta boxes for the Professional CPT.
+ *
+ * @param string $post_type The current post type.
+ * @return void
+ * @uses add_meta_box()
  */
-function vitapro_add_professional_meta_boxes() {
+function vitapro_add_professional_meta_boxes($post_type) {
     add_meta_box(
         'vpa_professional_schedule',
         __( 'Working Schedule', 'vitapro-appointments-fse' ),
@@ -101,7 +108,11 @@ function vitapro_add_professional_meta_boxes() {
 add_action( 'add_meta_boxes', 'vitapro_add_professional_meta_boxes' );
 
 /**
- * Render Professional Schedule meta box.
+ * Render the Professional Schedule meta box.
+ *
+ * @param WP_Post $post The current post object.
+ * @return void
+ * @uses get_post_meta()
  */
 function vitapro_render_professional_schedule_meta_box( $post ) {
     wp_nonce_field( 'vitapro_professional_meta_box', 'vitapro_professional_meta_box_nonce' );
@@ -160,7 +171,11 @@ function vitapro_render_professional_schedule_meta_box( $post ) {
 }
 
 /**
- * Render Professional Services meta box.
+ * Render the Professional Services meta box.
+ *
+ * @param WP_Post $post The current post object.
+ * @return void
+ * @uses get_post_meta()
  */
 function vitapro_render_professional_services_meta_box( $post ) {
     $assigned_services = get_post_meta( $post->ID, '_vpa_professional_services', true );
@@ -190,7 +205,11 @@ function vitapro_render_professional_services_meta_box( $post ) {
 }
 
 /**
- * Render Professional Custom Days Off meta box.
+ * Render the Professional Custom Days Off meta box.
+ *
+ * @param WP_Post $post The current post object.
+ * @return void
+ * @uses get_post_meta()
  */
 function vitapro_render_professional_custom_days_off_meta_box( $post ) {
     $custom_days_off = get_post_meta( $post->ID, '_vpa_professional_custom_days_off', true );
@@ -254,7 +273,11 @@ function vitapro_render_professional_custom_days_off_meta_box( $post ) {
 }
 
 /**
- * Save Professional meta data.
+ * Save the Professional meta data when the post is saved.
+ *
+ * @param int $post_id The ID of the post being saved.
+ * @return void
+ * @uses update_post_meta()
  */
 function vitapro_save_professional_meta_data( $post_id ) {
     if ( ! isset( $_POST['vitapro_professional_meta_box_nonce'] ) ) {

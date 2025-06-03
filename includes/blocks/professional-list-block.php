@@ -47,6 +47,9 @@ add_action( 'init', 'vitapro_appointments_register_professional_list_block' );
 
 /**
  * Render the Professional List block.
+ *
+ * @param array $attributes Block attributes.
+ * @return string HTML output.
  */
 function vitapro_appointments_render_professional_list_block( $attributes, $content ) {
     $professionals = get_posts( array(

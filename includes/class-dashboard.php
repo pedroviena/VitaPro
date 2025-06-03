@@ -1,14 +1,25 @@
 <?php
 /**
- * Advanced Dashboard
- * 
- * Handles advanced dashboard functionality with visual components.
+ * Dashboard
+ *
+ * Handles the admin dashboard and analytics for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Class VitaPro_Appointments_FSE_Dashboard
+ *
+ * Handles the admin dashboard and analytics for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
 class VitaPro_Appointments_FSE_Dashboard {
     
     /**
@@ -61,29 +72,31 @@ class VitaPro_Appointments_FSE_Dashboard {
     /**
      * Enqueue dashboard assets
      */
-    public function enqueue_dashboard_assets($hook) {
-        if (strpos($hook, 'vitapro-appointments') === false) {
-            return;
-        }
-        
-        // Chart.js for analytics
+    public function enqueue_dashboard_assets() {
+        // Chart.js local
         wp_enqueue_script(
-            'chartjs',
-            'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js',
+            'vitapro-chartjs',
+            VITAPRO_APPOINTMENTS_FSE_URL . 'assets/js/vendor/chart.min.js',
             array(),
-            '3.9.1',
+            '4.4.1', // ajuste para a versão baixada
             true
         );
-        
-        // FullCalendar for calendar view
+
+        // FullCalendar local (JS e CSS)
         wp_enqueue_script(
-            'fullcalendar',
-            'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js',
-            array(),
-            '6.1.8',
+            'vitapro-fullcalendar',
+            VITAPRO_APPOINTMENTS_FSE_URL . 'assets/js/vendor/fullcalendar.min.js',
+            array('jquery'),
+            '6.1.11', // ajuste para a versão baixada
             true
         );
-        
+        wp_enqueue_style(
+            'vitapro-fullcalendar',
+            VITAPRO_APPOINTMENTS_FSE_URL . 'assets/css/vendor/fullcalendar.min.css',
+            array(),
+            '6.1.11'
+        );
+
         // Dashboard JavaScript
         wp_enqueue_script(
             'vpa-dashboard',
@@ -393,6 +406,11 @@ class VitaPro_Appointments_FSE_Dashboard {
             wp_die(__('Security check failed', 'vitapro-appointments-fse'));
         }
         
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
+        
         $days = intval($_POST['days']);
         $start_date = isset($_POST['start_date']) ? sanitize_text_field($_POST['start_date']) : '';
         $end_date = isset($_POST['end_date']) ? sanitize_text_field($_POST['end_date']) : '';
@@ -468,6 +486,11 @@ class VitaPro_Appointments_FSE_Dashboard {
             wp_die(__('Security check failed', 'vitapro-appointments-fse'));
         }
         
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
+        
         global $wpdb;
         $table_name = $wpdb->prefix . 'vpa_appointments';
         
@@ -503,6 +526,11 @@ class VitaPro_Appointments_FSE_Dashboard {
     public function get_appointment_trends() {
         if (!wp_verify_nonce($_POST['nonce'], 'vpa_dashboard_nonce')) {
             wp_die(__('Security check failed', 'vitapro-appointments-fse'));
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
         }
         
         $days = intval($_POST['days']);
@@ -565,6 +593,11 @@ class VitaPro_Appointments_FSE_Dashboard {
     public function get_professional_performance() {
         if (!wp_verify_nonce($_POST['nonce'], 'vpa_dashboard_nonce')) {
             wp_die(__('Security check failed', 'vitapro-appointments-fse'));
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
         }
         
         global $wpdb;

@@ -8,6 +8,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Class VitaPro_Appointments_FSE_Email_Functions
+ *
+ * Handles advanced email functionality for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
 class VitaPro_Appointments_FSE_Email_Functions {
     
     /**
@@ -190,37 +198,17 @@ class VitaPro_Appointments_FSE_Email_Functions {
      */
     public function get_appointment_email_data($appointment_id) {
         global $wpdb;
-        // Usar a tabela customizada para buscar os dados do agendamento
         $table_name = $wpdb->prefix . 'vpa_appointments';
         $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $appointment_id), ARRAY_A);
 
         if (!$appointment) {
-            // Tentar buscar do post type como fallback se a tabela estiver vazia para um ID de post
-            $post = get_post($appointment_id);
-            if ($post && $post->post_type === 'vpa_appointment') {
-                 $appointment = array(
-                    'id' => $post->ID, // Mantém o ID do post
-                    'service_id' => get_post_meta($post->ID, '_vpa_appointment_service_id', true),
-                    'professional_id' => get_post_meta($post->ID, '_vpa_appointment_professional_id', true),
-                    'customer_name' => get_post_meta($post->ID, '_vpa_appointment_patient_name', true),
-                    'customer_email' => get_post_meta($post->ID, '_vpa_appointment_patient_email', true),
-                    'customer_phone' => get_post_meta($post->ID, '_vpa_appointment_patient_phone', true),
-                    'appointment_date' => get_post_meta($post->ID, '_vpa_appointment_date', true),
-                    'appointment_time' => get_post_meta($post->ID, '_vpa_appointment_time', true),
-                    'duration' => get_post_meta($post->ID, '_vpa_appointment_duration', true), // Pode não existir, pegar do serviço
-                    'status' => get_post_meta($post->ID, '_vpa_appointment_status', true),
-                    'notes' => $post->post_content, // Se as notas são o conteúdo do post
-                    'custom_fields' => get_post_meta($post->ID, '_vpa_appointment_custom_fields_data', true), // Se for meta
-                 );
-            } else {
-                return false;
-            }
+            return false;
         }
-        
+
         $service = get_post($appointment['service_id']);
         $professional = $appointment['professional_id'] ? get_post($appointment['professional_id']) : null;
 
-        $options = get_option('vitapro_appointments_settings', array()); // Usando get_option
+        $options = get_option('vitapro_appointments_main_settings', array());
         $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
         $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
 
@@ -265,7 +253,7 @@ class VitaPro_Appointments_FSE_Email_Functions {
             'status_raw'         => $status_raw,     // Para lógica interna
             'site_name'          => get_bloginfo('name'),
             'site_url'           => home_url(),
-            'custom_fields'      => $custom_fields_display, // Array formatado de campos customizados
+            'custom_fields'      => array(), // ...preencher se necessário...
             'appointment_notes'  => $appointment['notes'],
             'duration'           => $service_duration . ' ' . __('minutes', 'vitapro-appointments-fse'),
             // Adicione quaisquer outros dados que seus templates possam precisar
@@ -286,9 +274,8 @@ class VitaPro_Appointments_FSE_Email_Functions {
         }
         
         if (!file_exists($template_path)) {
-            // Log de erro ou fallback para um template padrão simples
-            error_log("VitaPro Email Template not found: {$template_name}");
-            return "Email template {$template_name} not found."; // Mensagem de erro simples
+            error_log("VitaPro Error: Template file not found: {$template_path}");
+            return "Email template {$template_name} not found."; // Fallback simples
         }
 
         ob_start();
@@ -302,7 +289,7 @@ class VitaPro_Appointments_FSE_Email_Functions {
      * Send email using WordPress mail function.
      */
     public function send_email( $to, $subject, $message, $headers = array(), $attachments = array() ) {
-        $options = get_option('vitapro_appointments_settings', array()); // Usar get_option
+        $options = get_option('vitapro_appointments_main_settings', array());
 
         $from_name = isset($options['email_from_name']) && !empty($options['email_from_name']) 
                      ? $options['email_from_name'] 

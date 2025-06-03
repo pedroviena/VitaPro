@@ -1,7 +1,11 @@
 <?php
 /**
- * AJAX Handlers
+ * Class VitaPro_Appointments_FSE_Ajax_Handlers
+ *
  * Handles AJAX requests for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -33,68 +37,137 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
             $this->availability_logic_instance = new VitaPro_Appointments_FSE_Availability_Logic();
         }
         if (class_exists('VitaPro_Appointments_FSE_Email_Functions')) { // Instanciar Email Functions
-            $this->email_functions_instance = new VitaPro_Appointments_FSE_Email_Functions();
+            if (method_exists('VitaPro_Appointments_FSE_Email_Functions', 'get_instance')) {
+                $this->email_functions_instance = VitaPro_Appointments_FSE_Email_Functions::get_instance();
+            } else {
+                // Fallback: instancia diretamente (não recomendado se houver hooks no construtor)
+                $this->email_functions_instance = new VitaPro_Appointments_FSE_Email_Functions();
+            }
         }
     }
     
     public function book_appointment() {
-        // ... (início do método book_appointment) ...
-        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
+        if (
+            !isset($_POST['nonce']) ||
+            !wp_verify_nonce(sanitize_key(wp_unslash($_POST['nonce'])), 'vpa_book_appointment_nonce')
+        ) {
+            wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'vpa_appointments';
+
+        // Sanitize and collect appointment data from $_POST
+        $data = array(
+            'service_id'      => intval($_POST['service_id']),
+            'professional_id' => intval($_POST['professional_id']),
+            'customer_name'   => sanitize_text_field($_POST['customer_name']),
+            'customer_email'  => sanitize_email($_POST['customer_email']),
+            'customer_phone'  => sanitize_text_field($_POST['customer_phone']),
+            'appointment_date'=> sanitize_text_field($_POST['appointment_date']),
+            'appointment_time'=> sanitize_text_field($_POST['appointment_time']),
+            'status'          => 'pending',
+            'notes'           => sanitize_textarea_field($_POST['appointment_notes']),
+            'created_at'      => current_time('mysql', 1),
+            'updated_at'      => current_time('mysql', 1),
+            // Adicione outros campos customizados conforme necessário
+        );
+
+        $wpdb->insert($table, $data);
         $appointment_id = $wpdb->insert_id;
-        
-        $options = get_option('vitapro_appointments_settings', array()); // Obter opções aqui
+
+        // Crie o post CPT apenas para interface administrativa e relacione com o ID da tabela customizada
+        $cpt_id = wp_insert_post(array(
+            'post_type'   => 'vpa_appointment',
+            'post_status' => 'publish',
+            'post_title'  => $data['customer_name'] . ' - ' . get_the_title($data['service_id']) . ' - ' . $data['appointment_date'],
+            'meta_input'  => array('_vpa_custom_table_id' => $appointment_id),
+        ));
+
+        // ...enviar e-mails e hooks...
+        $options = get_option('vitapro_appointments_settings', array());
         $send_emails = isset($options['send_email_notifications']) ? (bool)$options['send_email_notifications'] : true;
-        
-        if ($send_emails && $this->email_functions_instance) { // Usar a instância da classe de e-mail
+        if ($send_emails && $this->email_functions_instance) {
             $this->email_functions_instance->send_new_appointment_emails($appointment_id);
         }
-        
-        do_action('vitapro_appointment_created', $appointment_id); // Este hook já é usado pela classe de Email
-        
-        // ... (resto do método book_appointment com a geração do $details_html) ...
+        do_action('vitapro_appointment_created', $appointment_id);
+
+        // ...gerar $details_html...
 
         wp_send_json_success(array(
             'message' => __('Appointment booked successfully!', 'vitapro-appointments-fse'),
             'appointment_id' => $appointment_id,
-            'appointment_details' => $details_html, // Certifique-se que $details_html é gerado antes
-            'status' => $status,
+            'appointment_details' => $details_html,
+            'status' => 'pending',
         ));
     }
     
     public function cancel_appointment() {
-        // ... (início do método cancel_appointment) ...
-        
-        $old_status = $appointment->status; // Guardar status antigo
-        // ... (lógica de atualização do status para 'cancelled') ...
-        
-        // A classe VitaPro_Appointments_FSE_Email_Functions já escuta a ação 'vitapro_appointment_status_changed'.
-        // Então, o do_action abaixo deve ser suficiente para disparar os e-mails de cancelamento.
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
+        if (
+            !isset($_POST['nonce']) ||
+            !wp_verify_nonce(sanitize_key(wp_unslash($_POST['nonce'])), 'vpa_cancel_appointment_nonce')
+        ) {
+            wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'vpa_appointments';
+        $appointment_id = intval($_POST['appointment_id']);
+
+        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $appointment_id));
+        if (!$appointment) {
+            wp_send_json_error(__('Appointment not found.', 'vitapro-appointments-fse'));
+        }
+        $old_status = $appointment->status;
+
+        $wpdb->update($table, array(
+            'status' => 'cancelled',
+            'updated_at' => current_time('mysql', 1),
+        ), array('id' => $appointment_id));
+
         do_action('vitapro_appointment_status_changed', $appointment_id, 'cancelled', $old_status);
-        
-        // Remover chamadas diretas de e-mail daqui, se existirem, para evitar duplicidade.
-        // $options = get_option('vitapro_appointments_settings', array());
-        // $send_emails = isset($options['send_email_notifications']) ? (bool)$options['send_email_notifications'] : true;
-        // if ($send_emails && $this->email_functions_instance) {
-        //     $this->email_functions_instance->send_status_change_emails($appointment_id, 'cancelled', $old_status);
-        // }
-        
+
         wp_send_json_success(array('message' => __('Appointment cancelled successfully.', 'vitapro-appointments-fse')));
     }
     
     public function update_appointment_status() {
-        // ... (início do método update_appointment_status) ...
-        
-        // A classe VitaPro_Appointments_FSE_Email_Functions já escuta a ação 'vitapro_appointment_status_changed'.
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
+        if (
+            !isset($_POST['nonce']) ||
+            !wp_verify_nonce(sanitize_key(wp_unslash($_POST['nonce'])), 'vpa_update_appointment_status_nonce')
+        ) {
+            wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'vpa_appointments';
+        $appointment_id = intval($_POST['appointment_id']);
+        $new_status = sanitize_text_field($_POST['new_status']);
+
+        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $appointment_id));
+        if (!$appointment) {
+            wp_send_json_error(__('Appointment not found.', 'vitapro-appointments-fse'));
+        }
+        $old_status = $appointment->status;
+
+        $wpdb->update($table, array(
+            'status' => $new_status,
+            'updated_at' => current_time('mysql', 1),
+        ), array('id' => $appointment_id));
+
         do_action('vitapro_appointment_status_changed', $appointment_id, $new_status, $old_status);
-        
-        // Remover chamadas diretas de e-mail daqui para e-mails de 'confirmed' ou 'cancelled',
-        // pois o hook acima já deve cuidar disso através da classe de e-mail.
-        // $options = get_option('vitapro_appointments_settings', array());
-        // $send_emails = isset($options['send_email_notifications']) ? (bool)$options['send_email_notifications'] : true;
-        // if ($send_emails && $this->email_functions_instance && $new_status !== $old_status && ($new_status === 'confirmed' || $new_status === 'cancelled')) {
-        //      $this->email_functions_instance->send_status_change_emails($appointment_id, $new_status, $old_status);
-        // }
-        
+
         wp_send_json_success(array('message' => __('Appointment status updated successfully.', 'vitapro-appointments-fse')));
     }
 

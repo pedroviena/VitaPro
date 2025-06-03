@@ -10,7 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register Holiday Custom Post Type.
+ * Register the Holiday custom post type.
+ *
+ * @return void
+ * @uses register_post_type()
  */
 function vitapro_appointments_register_holiday_cpt() {
     $labels = array(
@@ -26,7 +29,6 @@ function vitapro_appointments_register_holiday_cpt() {
         'add_new'               => __( 'Add New', 'vitapro-appointments-fse' ),
         'new_item'              => __( 'New Holiday', 'vitapro-appointments-fse' ),
         'edit_item'             => __( 'Edit Holiday', 'vitapro-appointments-fse' ),
-        'update_item'           => __( 'Update Holiday', 'vitapro-appointments-fse
         'update_item'           => __( 'Update Holiday', 'vitapro-appointments-fse' ),
         'view_item'             => __( 'View Holiday', 'vitapro-appointments-fse' ),
         'view_items'            => __( 'View Holidays', 'vitapro-appointments-fse' ),
@@ -69,9 +71,13 @@ function vitapro_appointments_register_holiday_cpt() {
 add_action( 'init', 'vitapro_appointments_register_holiday_cpt', 0 );
 
 /**
- * Add meta boxes for Holiday CPT.
+ * Add meta boxes for the Holiday CPT.
+ *
+ * @param string $post_type The current post type.
+ * @return void
+ * @uses add_meta_box()
  */
-function vitapro_add_holiday_meta_boxes() {
+function vitapro_add_holiday_meta_boxes($post_type) {
     add_meta_box(
         'vpa_holiday_date',
         __( 'Holiday Date', 'vitapro-appointments-fse' ),
@@ -84,7 +90,11 @@ function vitapro_add_holiday_meta_boxes() {
 add_action( 'add_meta_boxes', 'vitapro_add_holiday_meta_boxes' );
 
 /**
- * Render Holiday Date meta box.
+ * Render the Holiday Date meta box.
+ *
+ * @param WP_Post $post The current post object.
+ * @return void
+ * @uses get_post_meta()
  */
 function vitapro_render_holiday_date_meta_box( $post ) {
     wp_nonce_field( 'vitapro_holiday_meta_box', 'vitapro_holiday_meta_box_nonce' );
@@ -119,7 +129,11 @@ function vitapro_render_holiday_date_meta_box( $post ) {
 }
 
 /**
- * Save Holiday meta data.
+ * Save the Holiday meta data when the post is saved.
+ *
+ * @param int $post_id The ID of the post being saved.
+ * @return void
+ * @uses update_post_meta()
  */
 function vitapro_save_holiday_meta_data( $post_id ) {
     if ( ! isset( $_POST['vitapro_holiday_meta_box_nonce'] ) ) {
@@ -154,6 +168,9 @@ add_action( 'save_post', 'vitapro_save_holiday_meta_data' );
 
 /**
  * Customize holiday list columns.
+ *
+ * @param array $columns The existing columns.
+ * @return array Modified columns.
  */
 function vitapro_set_holiday_columns( $columns ) {
     $columns = array(
@@ -168,7 +185,11 @@ function vitapro_set_holiday_columns( $columns ) {
 add_filter( 'manage_vpa_holiday_posts_columns', 'vitapro_set_holiday_columns' );
 
 /**
- * Render custom holiday list columns.
+ * Render custom column content for the Holiday CPT.
+ *
+ * @param string $column The column name.
+ * @param int $post_id The post ID.
+ * @return void
  */
 function vitapro_render_holiday_columns( $column, $post_id ) {
     switch ( $column ) {

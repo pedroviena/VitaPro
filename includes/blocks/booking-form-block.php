@@ -56,6 +56,10 @@ add_action( 'init', 'vitapro_appointments_register_booking_form_block' );
 
 /**
  * Render the Booking Form block.
+ *
+ * @param array $attributes Block attributes.
+ * @param string $content Block content.
+ * @return string HTML output.
  */
 function vitapro_appointments_render_booking_form_block( $attributes, $content ) {
     $block_id = 'vitapro-booking-form-' . wp_generate_uuid4();
@@ -274,3 +278,12 @@ function vitapro_appointments_register_block_patterns() {
     );
 }
 add_action( 'init', 'vitapro_appointments_register_block_patterns' );
+
+// Exemplo de inclusão de template:
+$template_path = VITAPRO_APPOINTMENTS_FSE_PATH . 'templates/booking-form.php';
+if (file_exists($template_path)) {
+    include $template_path;
+} else {
+    error_log('VitaPro Error: Template file not found: ' . $template_path);
+    // Opcional: echo '<div>Booking form template not found.</div>';
+}

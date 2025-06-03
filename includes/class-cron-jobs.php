@@ -8,6 +8,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Class VitaPro_Appointments_FSE_Cron_Jobs
+ *
+ * Handles scheduled tasks for VitaPro Appointments FSE.
+ *
+ * @package VitaPro_Appointments_FSE
+ * @since 1.0.0
+ */
 class VitaPro_Appointments_FSE_Cron_Jobs {
     
     private $email_functions_instance; // Para armazenar a instância
@@ -18,17 +26,14 @@ class VitaPro_Appointments_FSE_Cron_Jobs {
     public function __construct() {
         add_action(VITAPRO_REMINDER_CRON_HOOK, array($this, 'process_appointment_reminders'));
 
-        // Se a classe de e-mail não for um singleton, você pode instanciar aqui
-        // ou passá-la/obtê-la de alguma forma.
+        // Use singleton se disponível
         if (class_exists('VitaPro_Appointments_FSE_Email_Functions')) {
-            // Se VitaPro_Appointments_FSE_Email_Functions tem um método get_instance()
-            // $this->email_functions_instance = VitaPro_Appointments_FSE_Email_Functions::get_instance();
-            // Caso contrário, se ela é instanciada no load_dependencies e armazenada globalmente (não ideal):
-            // global $vita_pro_email_functions_instance;
-            // $this->email_functions_instance = $vita_pro_email_functions_instance;
-            // Ou, para simplificar, instanciar diretamente (cuidado com construtores pesados ou que registram hooks):
-            $this->email_functions_instance = new VitaPro_Appointments_FSE_Email_Functions();
-
+            if (method_exists('VitaPro_Appointments_FSE_Email_Functions', 'get_instance')) {
+                $this->email_functions_instance = VitaPro_Appointments_FSE_Email_Functions::get_instance();
+            } else {
+                // Fallback: instancia diretamente (não recomendado se houver hooks no construtor)
+                $this->email_functions_instance = new VitaPro_Appointments_FSE_Email_Functions();
+            }
         }
     }
 

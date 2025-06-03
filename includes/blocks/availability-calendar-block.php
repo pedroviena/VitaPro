@@ -35,6 +35,9 @@ add_action( 'init', 'vitapro_appointments_register_availability_calendar_block' 
 
 /**
  * Render the Availability Calendar block.
+ *
+ * @param array $attributes Block attributes.
+ * @return string HTML output.
  */
 function vitapro_appointments_render_availability_calendar_block( $attributes, $content ) {
     $block_id = 'vitapro-availability-calendar-' . wp_generate_uuid4();

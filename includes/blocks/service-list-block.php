@@ -47,6 +47,9 @@ add_action( 'init', 'vitapro_appointments_register_service_list_block' );
 
 /**
  * Render the Service List block.
+ *
+ * @param array $attributes Block attributes.
+ * @return string HTML output.
  */
 function vitapro_appointments_render_service_list_block( $attributes, $content ) {
     $services = get_posts( array(

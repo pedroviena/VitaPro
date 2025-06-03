@@ -10,15 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Get plugin option with default value.
- */
-function vitapro_appointments_get_option( $option_name, $default_value = '' ) {
-    $options = get_option( 'vitapro_appointments_settings', array() );
-    return isset( $options[ $option_name ] ) ? $options[ $option_name ] : $default_value;
-}
-
-/**
  * Get email template part path.
+ *
+ * @param string $template_name Template name.
+ * @return string Template part path.
  */
 function vitapro_get_email_template_part_path( $template_name ) {
     return VITAPRO_APPOINTMENTS_PLUGIN_DIR . 'templates/email/' . $template_name . '.php';
@@ -26,6 +21,9 @@ function vitapro_get_email_template_part_path( $template_name ) {
 
 /**
  * Get localized text for JavaScript.
+ *
+ * @param string $key Text key.
+ * @return string Localized text.
  */
 function vitapro_appointments_get_localized_text( $key ) {
     $texts = array(
@@ -46,6 +44,9 @@ function vitapro_appointments_get_localized_text( $key ) {
 
 /**
  * Format appointment status for display.
+ *
+ * @param string $status Appointment status.
+ * @return string Formatted status.
  */
 function vitapro_format_appointment_status( $status ) {
     $statuses = array(
@@ -61,6 +62,9 @@ function vitapro_format_appointment_status( $status ) {
 
 /**
  * Get appointment cancellation URL.
+ *
+ * @param int $appointment_id Appointment ID.
+ * @return string Cancellation URL.
  */
 function vitapro_get_appointment_cancellation_url( $appointment_id ) {
     return add_query_arg( array(
@@ -72,6 +76,9 @@ function vitapro_get_appointment_cancellation_url( $appointment_id ) {
 
 /**
  * Check if appointment can be cancelled by patient.
+ *
+ * @param int $appointment_id Appointment ID.
+ * @return bool True if patient can cancel, false otherwise.
  */
 function vitapro_can_patient_cancel_appointment( $appointment_id ) {
     $cancellation_allowed = vitapro_appointments_get_option( 'allow_patient_cancellation', false );
@@ -97,6 +104,9 @@ function vitapro_can_patient_cancel_appointment( $appointment_id ) {
 
 /**
  * Sanitize appointment status.
+ *
+ * @param string $status Appointment status.
+ * @return string Sanitized status.
  */
 function vitapro_sanitize_appointment_status( $status ) {
     $valid_statuses = array( 'pending', 'confirmed', 'completed', 'cancelled', 'no_show' );
@@ -105,6 +115,9 @@ function vitapro_sanitize_appointment_status( $status ) {
 
 /**
  * Get service duration with fallback.
+ *
+ * @param int $service_id Service ID.
+ * @return int Service duration in minutes.
  */
 function vitapro_get_service_duration( $service_id ) {
     $duration = get_post_meta( $service_id, '_vpa_service_duration', true );
@@ -113,6 +126,9 @@ function vitapro_get_service_duration( $service_id ) {
 
 /**
  * Get service buffer time.
+ *
+ * @param int $service_id Service ID.
+ * @return int Service buffer time in minutes.
  */
 function vitapro_get_service_buffer_time( $service_id ) {
     $buffer = get_post_meta( $service_id, '_vpa_service_buffer_time', true );
@@ -121,6 +137,9 @@ function vitapro_get_service_buffer_time( $service_id ) {
 
 /**
  * Check if date is within booking window.
+ *
+ * @param string $date_str Date string.
+ * @return bool True if date is bookable, false otherwise.
  */
 function vitapro_is_date_bookable( $date_str ) {
     $min_advance_hours = vitapro_appointments_get_option( 'min_advance_notice', 2 );
@@ -135,7 +154,39 @@ function vitapro_is_date_bookable( $date_str ) {
 
 /**
  * Generate unique appointment reference.
+ *
+ * @param int $appointment_id Appointment ID.
+ * @return string Appointment reference.
  */
 function vitapro_generate_appointment_reference( $appointment_id ) {
     return 'VPA-' . str_pad( $appointment_id, 6, '0', STR_PAD_LEFT );
+}
+
+if ( ! function_exists( 'vitapro_appointments_get_option' ) ) {
+    /**
+     * Get a plugin setting from the main settings array.
+     *
+     * @param string $key The setting key.
+     * @param mixed $default Default value if not set.
+     * @return mixed
+     */
+    function vitapro_appointments_get_option($key, $default = null) {
+        $settings = get_option('vitapro_appointments_main_settings', array());
+        return isset($settings[$key]) ? $settings[$key] : $default;
+    }
+}
+
+if ( ! function_exists( 'vitapro_appointments_update_option' ) ) {
+    /**
+     * Update a plugin setting in the main settings array.
+     *
+     * @param string $key The setting key.
+     * @param mixed $value The value to set.
+     * @return bool
+     */
+    function vitapro_appointments_update_option($key, $value) {
+        $settings = get_option('vitapro_appointments_main_settings', array());
+        $settings[$key] = $value;
+        return update_option('vitapro_appointments_main_settings', $settings);
+    }
 }

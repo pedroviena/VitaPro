@@ -10,7 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register Service Custom Post Type.
+ * Register the Service custom post type.
+ *
+ * @return void
+ * @uses register_post_type()
  */
 function vitapro_appointments_register_service_cpt() {
     $labels = array(
@@ -68,9 +71,13 @@ function vitapro_appointments_register_service_cpt() {
 add_action( 'init', 'vitapro_appointments_register_service_cpt', 0 );
 
 /**
- * Add meta boxes for Service CPT.
+ * Add meta boxes for the Service CPT.
+ *
+ * @param string $post_type The current post type.
+ * @return void
+ * @uses add_meta_box()
  */
-function vitapro_add_service_meta_boxes() {
+function vitapro_add_service_meta_boxes($post_type) {
     add_meta_box(
         'vpa_service_details',
         __( 'Service Details', 'vitapro-appointments-fse' ),
@@ -83,7 +90,11 @@ function vitapro_add_service_meta_boxes() {
 add_action( 'add_meta_boxes', 'vitapro_add_service_meta_boxes' );
 
 /**
- * Render Service Details meta box.
+ * Render the Service Details meta box.
+ *
+ * @param WP_Post $post The current post object.
+ * @return void
+ * @uses get_post_meta()
  */
 function vitapro_render_service_details_meta_box( $post ) {
     wp_nonce_field( 'vitapro_service_meta_box', 'vitapro_service_meta_box_nonce' );
@@ -126,7 +137,11 @@ function vitapro_render_service_details_meta_box( $post ) {
 }
 
 /**
- * Save Service meta data.
+ * Save the Service meta data when the post is saved.
+ *
+ * @param int $post_id The ID of the post being saved.
+ * @return void
+ * @uses update_post_meta()
  */
 function vitapro_save_service_meta_data( $post_id ) {
     if ( ! isset( $_POST['vitapro_service_meta_box_nonce'] ) ) {

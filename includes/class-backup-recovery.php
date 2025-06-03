@@ -174,9 +174,8 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
         );
         
         $result = $wpdb->insert($table_name, $backup_data);
-        
-        if (!$result) {
-            error_log("VitaPro Backup: Failed to insert backup record into database. Error: " . $wpdb->last_error);
+        if ($result === false) {
+            error_log('VitaPro DB Error: ' . $wpdb->last_error . ' on query: ' . $wpdb->last_query);
             return false;
         }
         
@@ -195,12 +194,12 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
     public function process_backup($backup_id, $options) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'vpa_backups';
-        
+
         @ini_set('memory_limit', '512M');
-        @set_time_limit(0); // 0 = sem limite
+        @set_time_limit(0);
 
         try {
-            $backup_filename_base = 'vpa-backup-' . $backup_id . '-' . date('Y-m-d-H-i-s');
+            $backup_filename_base = 'vpa-backup-' . $backup_id . '-' . date('Y-m-d H-i-s');
             $backup_path_base = $this->backup_dir . $backup_filename_base;
             
             $temp_dir = $this->backup_dir . 'temp_backup_' . $backup_id . '_' . time() . '/';
@@ -283,16 +282,11 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
             
             $this->delete_directory($temp_dir);
             
-            $wpdb->update(
-                $table_name,
-                array(
-                    'backup_size' => $final_size,
-                    'backup_path' => str_replace(ABSPATH, '', $final_backup_path),
-                    'backup_hash' => $backup_hash,
-                    'status' => 'completed'
-                ),
-                array('id' => $backup_id)
-            );
+            $result = $wpdb->update($table_name, array('status' => 'completed'), array('id' => $backup_id));
+            if ($result === false) {
+                error_log("[VitaPro Backup] Failed to update backup status to 'completed'. Backup ID: $backup_id. DB Error: {$wpdb->last_error}. Query: {$wpdb->last_query}");
+                throw new Exception(__('Could not update backup status in the database. Please check server logs.', 'vitapro-appointments-fse'));
+            }
             
             if (!empty($options['cloud_storage'])) {
                 // $this->upload_backup_to_cloud($backup_id, $final_backup_path, $options['cloud_storage']);
@@ -303,22 +297,10 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
             error_log("VitaPro Backup: Backup ID {$backup_id} completed successfully. Path: {$final_backup_path}");
 
         } catch (Exception $e) {
-            $wpdb->update(
-                $table_name,
-                array(
-                    'status' => 'failed',
-                    'error_message' => $e->getMessage()
-                ),
-                array('id' => $backup_id)
-            );
-            
-            if (isset($temp_dir) && is_dir($temp_dir)) { // Verificar se é diretório antes de deletar
-                $this->delete_directory($temp_dir);
-            }
-            // Não deletar $final_backup_path aqui, pois pode ser útil para depuração
-            
-            do_action('vpa_backup_failed', $backup_id, $e->getMessage());
-            error_log("VitaPro Backup: Backup ID {$backup_id} failed. Error: " . $e->getMessage());
+            error_log("[VitaPro Backup] Exception in process_backup (ID: $backup_id): " . $e->getMessage());
+            // Opcional: atualizar status para 'failed'
+            $wpdb->update($table_name, array('status' => 'failed'), array('id' => $backup_id));
+            throw new Exception(__('A backup error ocorreu: ', 'vitapro-appointments-fse') . $e->getMessage());
         }
     }
     
@@ -348,9 +330,14 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
         $backup_content .= "/*!40101 SET NAMES utf8mb4 */;\n\n";
 
         foreach ($tables_to_backup as $table) {
-            if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) === $table) {
-                $backup_content .= $this->get_table_structure_sql($table);
-                $backup_content .= $this->get_table_data_sql($table);
+            try {
+                if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) === $table) {
+                    $backup_content .= $this->get_table_structure_sql($table);
+                    $backup_content .= $this->get_table_data_sql($table);
+                }
+            } catch (Exception $e) {
+                error_log("[VitaPro Backup] Failed to backup table: $table. Error: " . $e->getMessage());
+                throw new Exception(sprintf(__('Failed to backup table %s. See server logs for details.', 'vitapro-appointments-fse'), $table));
             }
         }
         
@@ -359,7 +346,8 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
         $backup_content .= "/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;\n";
         
         if (file_put_contents($output_file, $backup_content) === false) {
-            throw new Exception("Failed to write database backup to file: {$output_file}");
+            error_log("[VitaPro Backup] Failed to write database backup file: $output_file");
+            throw new Exception(__('Could not write database backup file. Check server permissions.', 'vitapro-appointments-fse'));
         }
     }
 
@@ -495,15 +483,18 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
     
     private function encrypt_file($input_file, $output_file, $password) {
         if (!function_exists('openssl_encrypt')) {
-            throw new Exception(__('OpenSSL extension not available for encryption.', 'vitapro-appointments-fse'));
+            error_log("[VitaPro Backup] OpenSSL not available for encryption.");
+            throw new Exception(__('Encryption is not available on this server.', 'vitapro-appointments-fse'));
         }
         if (empty($password)) {
-            throw new Exception(__('Encryption password cannot be empty.', 'vitapro-appointments-fse'));
+            error_log("[VitaPro Backup] Encryption password is empty.");
+            throw new Exception(__('Encryption password is required.', 'vitapro-appointments-fse'));
         }
-        
+
         $data = file_get_contents($input_file);
         if ($data === false) {
-            throw new Exception(sprintf(__('Failed to read file for encryption: %s', 'vitapro-appointments-fse'), $input_file));
+            error_log("[VitaPro Backup] Failed to read file for encryption: $input_file");
+            throw new Exception(__('Could not read file for encryption.', 'vitapro-appointments-fse'));
         }
 
         $cipher = 'aes-256-cbc';
@@ -514,206 +505,79 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
 
         $encrypted = openssl_encrypt($data, $cipher, $key, OPENSSL_RAW_DATA, $iv);
         if ($encrypted === false) {
-            throw new Exception(sprintf(__('Encryption failed. OpenSSL error: %s', 'vitapro-appointments-fse'), openssl_error_string()));
+            error_log("[VitaPro Backup] OpenSSL encryption failed for file: $input_file");
+            throw new Exception(__('Failed to encrypt backup file.', 'vitapro-appointments-fse'));
         }
-        
+
         $encrypted_data_with_prefix = $salt . $iv . $encrypted; 
-        
+
         if (file_put_contents($output_file, $encrypted_data_with_prefix) === false) {
-            throw new Exception(sprintf(__('Failed to write encrypted file: %s', 'vitapro-appointments-fse'), $output_file));
-        }
-    }
-    
-    public function restore_backup_ajax_handler() {
-        if (!current_user_can('manage_options')) {
-             wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
-             return;
-        }
-        
-        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'vpa_backup_nonce')) {
-            wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
-            return;
-        }
-        
-        $backup_id = isset($_POST['backup_id']) ? intval($_POST['backup_id']) : 0;
-        $password = isset($_POST['password']) ? wp_unslash($_POST['password']) : ''; // Não sanitizar senha aqui
-        $restore_options = array(
-            'restore_database' => isset($_POST['restore_database']) && $_POST['restore_database'] === 'true',
-            'restore_files' => isset($_POST['restore_files']) && $_POST['restore_files'] === 'true',
-            'restore_uploads' => isset($_POST['restore_uploads']) && $_POST['restore_uploads'] === 'true'
-        );
-
-        if (!$backup_id) {
-            wp_send_json_error(__('Invalid backup ID.', 'vitapro-appointments-fse'));
-            return;
-        }
-        
-        try {
-            $this->process_restore($backup_id, $password, $restore_options);
-            wp_send_json_success(array('message' => __('Backup restored successfully. Please review your site.', 'vitapro-appointments-fse')));
-        } catch (Exception $e) {
-            wp_send_json_error(array('message' => $e->getMessage()));
-        }
-    }
-    
-    private function process_restore($backup_id, $password, $options) {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'vpa_backups';
-        $backup = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $backup_id));
-        
-        if (!$backup) {
-            throw new Exception(__('Backup record not found in database.', 'vitapro-appointments-fse'));
-        }
-        
-        $backup_file_path_full = ABSPATH . $backup->backup_path;
-
-        if (!file_exists($backup_file_path_full)) {
-            throw new Exception(sprintf(__('Backup file not found at: %s', 'vitapro-appointments-fse'), esc_html($backup->backup_path)));
-        }
-        
-        if ($backup->status !== 'completed' || empty($backup->backup_hash)) {
-             throw new Exception(__('Backup is not complete or is missing integrity information. Cannot restore.', 'vitapro-appointments-fse'));
-        }
-
-        $current_hash = hash_file('sha256', $backup_file_path_full);
-        if ($current_hash !== $backup->backup_hash) {
-            throw new Exception(__('Backup file is corrupted or has been tampered with. Hash mismatch.', 'vitapro-appointments-fse'));
-        }
-        
-        $restore_base_dir = trailingslashit($this->backup_dir) . 'restore_temp/';
-        $restore_dir = $restore_base_dir . 'backup_contents_' . $backup_id . '_' . time() . '/';
-        
-        if (!wp_mkdir_p($restore_dir)) {
-            throw new Exception(__('Could not create temporary directory for restoration.', 'vitapro-appointments-fse'));
-        }
-        
-        try {
-            $file_to_extract = $backup_file_path_full;
-            $decrypted_file_path = '';
-            
-            if ($backup->encryption_enabled) {
-                if (empty($password)) {
-                    throw new Exception(__('Password is required to restore this encrypted backup.', 'vitapro-appointments-fse'));
-                }
-                $decrypted_file_path = $restore_dir . basename($backup->backup_path, '.enc');
-                $this->decrypt_file($backup_file_path_full, $decrypted_file_path, $password);
-                $file_to_extract = $decrypted_file_path;
-            }
-            
-            if ($backup->compression_type === 'zip') {
-                $this->extract_zip_archive($file_to_extract, $restore_dir);
-            } else { 
-                $this->extract_tar_archive($file_to_extract, $restore_dir);
-            }
-            
-            // Limpar arquivo descriptografado se foi criado
-            if ($backup->encryption_enabled && !empty($decrypted_file_path) && file_exists($decrypted_file_path)) {
-                unlink($decrypted_file_path);
-            }
-
-            $manifest_file = $restore_dir . 'manifest.json';
-            if (!file_exists($manifest_file)) {
-                throw new Exception(__('Backup manifest.json not found. Cannot proceed with restore.', 'vitapro-appointments-fse'));
-            }
-            $manifest = json_decode(file_get_contents($manifest_file), true);
-            if (!$manifest || !is_array($manifest) || !isset($manifest['includes'])) {
-                 throw new Exception(__('Invalid manifest.json file in backup.', 'vitapro-appointments-fse'));
-            }
-
-            if ($options['restore_database'] && $manifest['includes']['database']) {
-                $db_file = $restore_dir . 'database.sql';
-                if (file_exists($db_file)) {
-                    $this->restore_database($db_file);
-                } else {
-                    error_log("VitaPro Restore: Database SQL file 'database.sql' not found in {$restore_dir} for backup ID {$backup_id}.");
-                    // Não lançar exceção se o arquivo não existir, mas logar.
-                }
-            }
-            
-            $plugin_base_path = defined('VITAPRO_APPOINTMENTS_FSE_PATH') ? VITAPRO_APPOINTMENTS_FSE_PATH : trailingslashit(dirname(VITAPRO_APPOINTMENTS_FSE_PLUGIN_FILE));
-
-            if ($options['restore_files'] && $manifest['includes']['files']) {
-                $files_dir = $restore_dir . 'plugin_files/';
-                if (is_dir($files_dir)) {
-                    $this->copy_directory($files_dir, $plugin_base_path);
-                }
-            }
-            
-            if ($options['restore_uploads'] && $manifest['includes']['uploads']) {
-                $uploads_dir_in_backup = $restore_dir . 'uploads/';
-                $wp_upload_dir = wp_upload_dir();
-                $target_uploads_dir = trailingslashit($wp_upload_dir['basedir']);
-
-                if (is_dir($uploads_dir_in_backup)) {
-                    $this->copy_directory($uploads_dir_in_backup, $target_uploads_dir);
-                }
-            }
-            
-            do_action('vpa_backup_restored', $backup_id, $options);
-            error_log("VitaPro Backup: Backup ID {$backup_id} restored.");
-
-        } catch (Exception $e) {
-            throw $e; 
-        } finally {
-            if (is_dir($restore_base_dir)) { // Verificar se o diretório base ainda existe
-                $this->delete_directory($restore_base_dir);
-            }
+            error_log("[VitaPro Backup] Failed to write encrypted file: $output_file");
+            throw new Exception(__('Could not write encrypted backup file. Check server permissions.', 'vitapro-appointments-fse'));
         }
     }
     
     private function decrypt_file($input_file, $output_file, $password) {
         if (!function_exists('openssl_decrypt')) {
-            throw new Exception(__('OpenSSL extension not available for decryption.', 'vitapro-appointments-fse'));
+            error_log("[VitaPro Restore] OpenSSL not available for decryption.");
+            throw new Exception(__('Decryption is not available on this server.', 'vitapro-appointments-fse'));
         }
         if (empty($password)) {
-            throw new Exception(__('Decryption password cannot be empty.', 'vitapro-appointments-fse'));
+            error_log("[VitaPro Restore] Decryption password is empty.");
+            throw new Exception(__('Decryption password is required.', 'vitapro-appointments-fse'));
         }
 
         $encrypted_data_with_prefix = file_get_contents($input_file);
         if ($encrypted_data_with_prefix === false) {
-            throw new Exception(sprintf(__('Failed to read encrypted file: %s', 'vitapro-appointments-fse'), $input_file));
+            error_log("[VitaPro Restore] Failed to read encrypted file: $input_file");
+            throw new Exception(__('Could not read encrypted backup file.', 'vitapro-appointments-fse'));
         }
 
         $cipher = 'aes-256-cbc';
         $ivlen = openssl_cipher_iv_length($cipher);
-        $saltlen = 16; // Tamanho do salt que usamos
+        $saltlen = 16;
 
         if (strlen($encrypted_data_with_prefix) < ($saltlen + $ivlen)) {
-            throw new Exception('Encrypted file is too short to contain salt and IV.');
+            error_log("[VitaPro Restore] Encrypted file too short or corrupted: $input_file");
+            throw new Exception(__('Encrypted backup file is corrupted or incomplete.', 'vitapro-appointments-fse'));
         }
 
         $salt = substr($encrypted_data_with_prefix, 0, $saltlen);
         $iv = substr($encrypted_data_with_prefix, $saltlen, $ivlen);
         $encrypted_data = substr($encrypted_data_with_prefix, $saltlen + $ivlen);
-        
+
         $key = hash_pbkdf2("sha256", $password, $salt, 10000, 32, true);
 
         $decrypted = openssl_decrypt($encrypted_data, $cipher, $key, OPENSSL_RAW_DATA, $iv);
-        
+
         if ($decrypted === false) {
-            throw new Exception(sprintf(__('Decryption failed. Invalid password or corrupted file. OpenSSL error: %s', 'vitapro-appointments-fse'), openssl_error_string()));
+            error_log("[VitaPro Restore] OpenSSL decryption failed for file: $input_file");
+            throw new Exception(__('Failed to decrypt backup file. The password may be incorrect.', 'vitapro-appointments-fse'));
         }
-        
+
         if (file_put_contents($output_file, $decrypted) === false) {
-            throw new Exception(sprintf(__('Failed to write decrypted file: %s', 'vitapro-appointments-fse'), $output_file));
+            error_log("[VitaPro Restore] Failed to write decrypted file: $output_file");
+            throw new Exception(__('Could not write decrypted backup file. Check server permissions.', 'vitapro-appointments-fse'));
         }
     }
-    
+
     private function extract_zip_archive($zip_file, $extract_dir) {
         if (!class_exists('ZipArchive')) {
-            throw new Exception(__('ZipArchive class not available.', 'vitapro-appointments-fse'));
+            error_log("[VitaPro Restore] ZipArchive class not available for extraction.");
+            throw new Exception(__('ZIP extraction is not available on this server.', 'vitapro-appointments-fse'));
         }
-        
+
         $zip = new ZipArchive();
         $res = $zip->open($zip_file);
         if ($res !== TRUE) {
-            throw new Exception(sprintf(__('Cannot open ZIP file: %s. Error code: %s', 'vitapro-appointments-fse'), $zip_file, $res));
+            error_log("[VitaPro Restore] Failed to open ZIP file: $zip_file. ZipArchive error code: $res");
+            throw new Exception(__('Could not open ZIP backup file. The file may be corrupted.', 'vitapro-appointments-fse'));
         }
-        
+
         if (!$zip->extractTo($extract_dir)) {
-            $error_message = $zip->getStatusString();
+            error_log("[VitaPro Restore] Failed to extract ZIP file: $zip_file to $extract_dir");
             $zip->close();
-            throw new Exception(sprintf(__('Failed to extract ZIP file to: %s. Error: %s', 'vitapro-appointments-fse'), $extract_dir, $error_message));
+            throw new Exception(__('Failed to extract backup archive. Check server permissions.', 'vitapro-appointments-fse'));
         }
         $zip->close();
     }
@@ -757,69 +621,59 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
         
         $sql_content = file_get_contents($sql_file);
         if ($sql_content === false) {
-            throw new Exception(sprintf(__('Failed to read SQL backup file: %s', 'vitapro-appointments-fse'), $sql_file));
+            error_log("[VitaPro Restore] Failed to read SQL file: $sql_file");
+            throw new Exception(__('Could not read SQL backup file.', 'vitapro-appointments-fse'));
         }
         
         $sql_content = preg_replace('%/\*(?:(?!\*/).)*\*/%s', '', $sql_content);
         $sql_content = preg_replace('/^-- .*$/m', '', $sql_content);
-        $queries = preg_split('/;\s*(\n|$)/', $sql_content); // Melhor separador
-        
+        $queries = preg_split('/;\s*(\n|$)/', $sql_content);
+
         $wpdb->query('SET foreign_key_checks = 0');
-        $wpdb->hide_errors(); // Suprimir erros do WordPress para tratar manualmente
+        $wpdb->hide_errors();
 
         foreach ($queries as $query) {
-            $query = trim($query);
-            if (!empty($query)) {
-                $wpdb->query($query); // Não verificar $result aqui, pois dbDelta pode retornar coisas estranhas
-                if ($wpdb->last_error) {
-                    $error_message = $wpdb->last_error;
-                    $wpdb->query('SET foreign_key_checks = 1');
-                    $wpdb->show_errors();
-                    throw new Exception(sprintf(__('Database restore failed on query: %s. Error: %s', 'vitapro-appointments-fse'), esc_html(substr($query, 0, 100) . '...'), esc_html($error_message)));
+            if (trim($query)) {
+                $result = $wpdb->query($query);
+                if ($result === false) {
+                    error_log("[VitaPro Restore] SQL execution failed. Query: $query | Error: {$wpdb->last_error}");
+                    // Opcional: lançar exceção ou continuar
                 }
             }
         }
         $wpdb->query('SET foreign_key_checks = 1');
-        $wpdb->show_errors(); // Restaurar exibição de erros
+        $wpdb->show_errors();
     }
 
-    private function restore_plugin_files($source_dir) {
-        $plugin_path = defined('VITAPRO_APPOINTMENTS_FSE_PATH') ? VITAPRO_APPOINTMENTS_FSE_PATH : trailingslashit(dirname(VITAPRO_APPOINTMENTS_FSE_PLUGIN_FILE));
-        $this->copy_directory($source_dir, $plugin_path);
-    }
-
-    private function restore_uploads($source_dir) {
-        $wp_upload_dir = wp_upload_dir();
-        $target_dir = trailingslashit($wp_upload_dir['basedir']);
-        $this->copy_directory($source_dir, $target_dir);
-    }
-    
     private function copy_directory($source, $destination) {
         if (!is_dir($destination)) {
-            if (!wp_mkdir_p($destination)) {
-                 throw new Exception(sprintf(__('Failed to create directory: %s', 'vitapro-appointments-fse'), $destination));
+            if (!mkdir($destination, 0755, true)) {
+                error_log("[VitaPro Backup] Failed to create directory: $destination");
+                throw new Exception(sprintf(__('Could not create directory: %s', 'vitapro-appointments-fse'), $destination));
             }
         }
-        
+
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
             RecursiveIteratorIterator::SELF_FIRST
         );
-        
+
         foreach ($iterator as $item) {
-            $dest_path = rtrim($destination, '/\\') . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+            $target = $destination . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
             if ($item->isDir()) {
-                if (!is_dir($dest_path) && !wp_mkdir_p($dest_path)) {
-                     throw new Exception(sprintf(__('Failed to create subdirectory: %s', 'vitapro-appointments-fse'), $dest_path));
+                if (!is_dir($target) && !mkdir($target, 0755, true)) {
+                    error_log("[VitaPro Backup] Failed to create directory during copy: $target");
+                    throw new Exception(sprintf(__('Could not create directory: %s', 'vitapro-appointments-fse'), $target));
                 }
             } else {
-                if (!copy($item->getRealPath(), $dest_path)) {
-                    throw new Exception(sprintf(__('Failed to copy file: %s to %s', 'vitapro-appointments-fse'), $item->getRealPath(), $dest_path));
+                if (!copy($item, $target)) {
+                    error_log("[VitaPro Backup] Failed to copy file: {$item} to $target");
+                    throw new Exception(sprintf(__('Failed to copy file: %s', 'vitapro-appointments-fse'), $item));
                 }
             }
         }
     }
-    
+
     private function delete_directory($dir) {
         if (!file_exists($dir)) {
             return true;
@@ -1049,6 +903,10 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
     }
 
     public function schedule_backup_ajax_handler() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
         wp_send_json_success(array('message' => __('Backup scheduling not fully implemented yet.', 'vitapro-appointments-fse')));
     }
 
@@ -1061,11 +919,19 @@ class VitaPro_Appointments_FSE_Backup_Recovery {
     }
 
     public function upload_to_cloud_ajax_handler() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
         wp_send_json_error(__('Cloud upload not implemented yet.', 'vitapro-appointments-fse'));
     }
     
     public function test_cloud_connection_ajax_handler() {
-         wp_send_json_error(__('Cloud connection test not implemented yet.', 'vitapro-appointments-fse'));
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
+            return;
+        }
+        wp_send_json_error(__('Cloud connection test not implemented yet.', 'vitapro-appointments-fse'));
     }
 
     public function verify_backup_ajax_handler() {
