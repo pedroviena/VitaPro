@@ -104,35 +104,15 @@ function vitapro_render_service_details_meta_box( $post ) {
     $buffer_time = get_post_meta( $post->ID, '_vpa_service_buffer_time', true );
 
     ?>
-    <table class="form-table">
-        <tr>
-            <th scope="row">
-                <label for="vpa_service_duration"><?php _e( 'Duration (minutes)', 'vitapro-appointments-fse' ); ?></label>
-            </th>
-            <td>
-                <input type="number" id="vpa_service_duration" name="vpa_service_duration" value="<?php echo esc_attr( $duration ); ?>" min="1" step="1" class="regular-text" />
-                <p class="description"><?php _e( 'How long does this service take?', 'vitapro-appointments-fse' ); ?></p>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row">
-                <label for="vpa_service_price"><?php _e( 'Price', 'vitapro-appointments-fse' ); ?></label>
-            </th>
-            <td>
-                <input type="number" id="vpa_service_price" name="vpa_service_price" value="<?php echo esc_attr( $price ); ?>" min="0" step="0.01" class="regular-text" />
-                <p class="description"><?php _e( 'Optional: Service price for display purposes.', 'vitapro-appointments-fse' ); ?></p>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row">
-                <label for="vpa_service_buffer_time"><?php _e( 'Buffer Time (minutes)', 'vitapro-appointments-fse' ); ?></label>
-            </th>
-            <td>
-                <input type="number" id="vpa_service_buffer_time" name="vpa_service_buffer_time" value="<?php echo esc_attr( $buffer_time ); ?>" min="0" step="1" class="regular-text" />
-                <p class="description"><?php _e( 'Additional time needed between appointments for preparation/cleanup.', 'vitapro-appointments-fse' ); ?></p>
-            </td>
-        </tr>
-    </table>
+    <div class="vpa-meta-row">
+        <label><?php _e('Price', 'vitapro-appointments-fse'); ?></label>
+        <input type="number" name="_vpa_service_price" value="<?php echo esc_attr(get_post_meta($post->ID, '_vpa_service_price', true)); ?>" step="0.01" min="0" />
+    </div>
+    <div class="vpa-meta-row">
+        <label><?php _e('Duration (minutes)', 'vitapro-appointments-fse'); ?></label>
+        <input type="number" name="_vpa_service_duration" value="<?php echo esc_attr(get_post_meta($post->ID, '_vpa_service_duration', true)); ?>" min="1" />
+    </div>
+    <!-- ...outros campos... -->
     <?php
 }
 
@@ -162,16 +142,29 @@ function vitapro_save_service_meta_data( $post_id ) {
         }
     }
 
-    if ( isset( $_POST['vpa_service_duration'] ) ) {
-        update_post_meta( $post_id, '_vpa_service_duration', absint( $_POST['vpa_service_duration'] ) );
+    if ( isset( $_POST['_vpa_service_duration'] ) ) {
+        update_post_meta( $post_id, '_vpa_service_duration', absint( $_POST['_vpa_service_duration'] ) );
     }
 
-    if ( isset( $_POST['vpa_service_price'] ) ) {
-        update_post_meta( $post_id, '_vpa_service_price', floatval( $_POST['vpa_service_price'] ) );
+    if ( isset( $_POST['_vpa_service_price'] ) ) {
+        update_post_meta( $post_id, '_vpa_service_price', floatval( $_POST['_vpa_service_price'] ) );
     }
 
-    if ( isset( $_POST['vpa_service_buffer_time'] ) ) {
-        update_post_meta( $post_id, '_vpa_service_buffer_time', absint( $_POST['vpa_service_buffer_time'] ) );
+    if ( isset( $_POST['_vpa_service_buffer_time'] ) ) {
+        update_post_meta( $post_id, '_vpa_service_buffer_time', absint( $_POST['_vpa_service_buffer_time'] ) );
     }
 }
 add_action( 'save_post', 'vitapro_save_service_meta_data' );
+
+// Enqueue scripts/styles para admin
+add_action('admin_enqueue_scripts', function($hook) {
+    global $post_type;
+    if (in_array($post_type, array('vpa_service'))) {
+        wp_enqueue_style('vpa-admin', VITAPRO_APPOINTMENTS_FSE_URL . 'assets/css/admin.css', array(), VITAPRO_APPOINTMENTS_FSE_VERSION);
+        wp_enqueue_script('vpa-admin', VITAPRO_APPOINTMENTS_FSE_URL . 'assets/js/admin.js', array('jquery', 'jquery-ui-datepicker', 'jquery-ui-slider'), VITAPRO_APPOINTMENTS_FSE_VERSION, true);
+        wp_enqueue_style('wp-color-picker');
+        wp_enqueue_script('wp-color-picker');
+        wp_enqueue_script('jquery-ui-timepicker', VITAPRO_APPOINTMENTS_FSE_URL . 'assets/js/vendor/jquery-ui-timepicker-addon.js', array('jquery', 'jquery-ui-datepicker'), VITAPRO_APPOINTMENTS_FSE_VERSION, true);
+        wp_enqueue_style('jquery-ui-timepicker', VITAPRO_APPOINTMENTS_FSE_URL . 'assets/css/vendor/jquery-ui-timepicker-addon.css', array(), VITAPRO_APPOINTMENTS_FSE_VERSION);
+    }
+});

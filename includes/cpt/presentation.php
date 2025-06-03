@@ -9,6 +9,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!class_exists('VitaPro_Appointments_FSE_Overview_Page')) {
 class VitaPro_Appointments_FSE_Overview_Page {
 
     private static $instance = null;
@@ -809,10 +810,18 @@ class VitaPro_Appointments_FSE_Overview_Page {
                         'break_end'   => '13:00',
                     );
                 }
-                $default_schedule['saturday'] = $default_schedule['sunday'] = array('working' => false, 'start' => '', 'end' => '', 'break_start' => '', 'break_end' => '');
+                $default_schedule['saturday'] = array('working' => false, 'start' => '', 'end' => '', 'break_start' => '', 'break_end' => '');
+                $default_schedule['sunday'] = array('working' => false, 'start' => '', 'end' => '', 'break_start' => '', 'break_end' => '');
                 update_post_meta($professional_id, '_vpa_professional_schedule', $default_schedule);
-                if (isset($service_id) && $service_id) { // Associar o serviço criado ao profissional
-                    update_post_meta($professional_id, '_vpa_professional_services', array($service_id));
+                // Corrigir: $service_id pode não estar definido se o serviço já existia
+                if (!isset($service_id) || !$service_id) {
+                    $existing_service = get_page_by_path('general-consultation', OBJECT, 'vpa_service');
+                    $service_id_to_link = $existing_service ? $existing_service->ID : 0;
+                } else {
+                    $service_id_to_link = $service_id;
+                }
+                if ($service_id_to_link) {
+                    update_post_meta($professional_id, '_vpa_professional_services', array($service_id_to_link));
                 }
             }
         }
@@ -821,9 +830,8 @@ class VitaPro_Appointments_FSE_Overview_Page {
             $main_options['business_name'] = get_bloginfo('name');
             $main_options['business_email'] = get_option('admin_email');
             // Outras opções padrão que podem ser redefinidas no Quick Setup
-             update_option('vitapro_appointments_settings', $main_options);
+            update_option('vitapro_appointments_settings', $main_options);
         }
-
 
         wp_send_json_success(array('message' => __('Quick setup has been initiated. Default settings and sample data (if applicable) have been applied.', 'vitapro-appointments-fse')));
     }
@@ -844,6 +852,5 @@ class VitaPro_Appointments_FSE_Overview_Page {
         wp_send_json_error(array('message' => __('Invalid notice ID.', 'vitapro-appointments-fse')));
     }
 }
-// Não instancie aqui com ::get_instance() se já é feito no load_dependencies do arquivo principal.
-// VitaPro_Appointments_FSE_Overview_Page::get_instance();
+// Não instancie aqui, deixe para o arquivo principal (vitapro-appointments-fse.php)
 ?>

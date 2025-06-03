@@ -55,11 +55,11 @@ class VitaPro_Appointments_FSE_Admin_Settings {
         // Submenu de Configurações Gerais
         add_submenu_page(
             $parent_slug,
-            esc_html__('Settings - VitaPro Appointments', 'vitapro-appointments-fse'), // Page Title
-            esc_html__('Settings', 'vitapro-appointments-fse'),                       // Menu Title
-            'manage_options',                                                         // Capability
-            'vitapro-appointments-settings',                                          // Menu slug
-            array($this, 'render_general_settings_page_callback')                     // Callback
+            esc_html__('Settings - VitaPro Appointments', 'vitapro-appointments-fse'),
+            esc_html__('Settings', 'vitapro-appointments-fse'),
+            'manage_options',
+            'vitapro-appointments-settings',
+            array($this, 'render_general_settings_page_callback')
         );
 
         // Submenu de Modelos de Email
@@ -85,11 +85,10 @@ class VitaPro_Appointments_FSE_Admin_Settings {
      */
     public function register_main_settings_group() {
         register_setting(
-            'vitapro_appointments_options_group',          // Option group name.
-            'vitapro_appointments_settings',               // Option name in the database.
-            'vitapro_appointments_settings_sanitize'       // Sanitization callback from includes/cpt/settings-page.php
+            'vitapro_appointments_options_group',
+            'vitapro_appointments_settings',
+            'vitapro_appointments_settings_sanitize'
         );
-        // Registre outros grupos de opções aqui se necessário.
     }
 
     /**

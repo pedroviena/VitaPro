@@ -48,16 +48,6 @@ class VitaPro_Appointments_FSE_Dashboard {
             array($this, 'display_analytics_page')
         );
         
-        // Reports submenu
-        add_submenu_page(
-            'vitapro-appointments',
-            __('Reports', 'vitapro-appointments-fse'),
-            __('Reports', 'vitapro-appointments-fse'),
-            'manage_options',
-            'vitapro-appointments-reports',
-            array($this, 'display_reports_page')
-        );
-        
         // Calendar View submenu
         add_submenu_page(
             'vitapro-appointments',
@@ -402,79 +392,19 @@ class VitaPro_Appointments_FSE_Dashboard {
      * Get dashboard stats
      */
     public function get_dashboard_stats() {
-        if (!wp_verify_nonce($_POST['nonce'], 'vpa_dashboard_nonce')) {
-            wp_die(__('Security check failed', 'vitapro-appointments-fse'));
-        }
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
-            return;
-        }
-        
-        $days = intval($_POST['days']);
-        $start_date = isset($_POST['start_date']) ? sanitize_text_field($_POST['start_date']) : '';
-        $end_date = isset($_POST['end_date']) ? sanitize_text_field($_POST['end_date']) : '';
-        
-        if ($start_date && $end_date) {
-            $date_condition = "appointment_date BETWEEN '{$start_date}' AND '{$end_date}'";
-            $prev_start = date('Y-m-d', strtotime($start_date . ' -' . (strtotime($end_date) - strtotime($start_date)) / 86400 . ' days'));
-            $prev_end = date('Y-m-d', strtotime($start_date . ' -1 day'));
-        } else {
-            $date_condition = "appointment_date >= DATE_SUB(CURDATE(), INTERVAL {$days} DAY)";
-            $prev_start = date('Y-m-d', strtotime("-" . ($days * 2) . " days"));
-            $prev_end = date('Y-m-d', strtotime("-{$days} days"));
-        }
-        
         global $wpdb;
-        $table_name = $wpdb->prefix . 'vpa_appointments';
-        
-        // Current period stats
-        $current_stats = $wpdb->get_row("
-            SELECT 
-                COUNT(*) as total_appointments,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_appointments,
-                COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_appointments,
-                SUM(CASE WHEN status = 'completed' THEN 
-                    (SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = service_id AND meta_key = '_vpa_service_price')
-                    ELSE 0 END) as total_revenue
-            FROM {$table_name} 
-            WHERE {$date_condition}
-        ");
-        
-        // Previous period stats for comparison
-        $previous_stats = $wpdb->get_row($wpdb->prepare("
-            SELECT 
-                COUNT(*) as total_appointments,
-                SUM(CASE WHEN status = 'completed' THEN 
-                    (SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = service_id AND meta_key = '_vpa_service_price')
-                    ELSE 0 END) as total_revenue
-            FROM {$table_name} 
-            WHERE appointment_date BETWEEN %s AND %s
-        ", $prev_start, $prev_end));
-        
-        // Calculate changes
-        $appointments_change = $previous_stats->total_appointments > 0 ? 
-            (($current_stats->total_appointments - $previous_stats->total_appointments) / $previous_stats->total_appointments) * 100 : 0;
-        
-        $revenue_change = $previous_stats->total_revenue > 0 ? 
-            (($current_stats->total_revenue - $previous_stats->total_revenue) / $previous_stats->total_revenue) * 100 : 0;
-        
-        // Conversion rate (completed / total)
-        $conversion_rate = $current_stats->total_appointments > 0 ? 
-            ($current_stats->completed_appointments / $current_stats->total_appointments) * 100 : 0;
-        
-        // Mock satisfaction score (would come from reviews/ratings)
-        $satisfaction_score = 4.5;
-        
+        $table = $wpdb->prefix . 'vpa_appointments';
+        $total = (int)$wpdb->get_var("SELECT COUNT(*) FROM $table");
+        $confirmed = (int)$wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'confirmed'");
+        $pending = (int)$wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'pending'");
+        $cancelled = (int)$wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'cancelled'");
+        $revenue = (float)$wpdb->get_var("SELECT SUM(price) FROM $table WHERE status = 'confirmed'");
         wp_send_json_success(array(
-            'total_appointments' => intval($current_stats->total_appointments),
-            'total_revenue' => floatval($current_stats->total_revenue),
-            'conversion_rate' => round($conversion_rate, 1),
-            'satisfaction_score' => $satisfaction_score,
-            'appointments_change' => round($appointments_change, 1),
-            'revenue_change' => round($revenue_change, 1),
-            'conversion_change' => 0, // Would calculate from previous period
-            'satisfaction_change' => 0 // Would calculate from previous period
+            'total' => $total,
+            'confirmed' => $confirmed,
+            'pending' => $pending,
+            'cancelled' => $cancelled,
+            'revenue' => $revenue,
         ));
     }
     
@@ -634,5 +564,25 @@ class VitaPro_Appointments_FSE_Dashboard {
             'appointments' => $appointments_data,
             'revenue' => $revenue_data
         ));
+    }
+    
+    /**
+     * Get calendar events
+     */
+    public function get_calendar_events() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vpa_appointments';
+        $events = array();
+        $rows = $wpdb->get_results("SELECT * FROM $table WHERE status IN ('confirmed','pending')");
+        foreach ($rows as $row) {
+            $events[] = array(
+                'id' => $row->id,
+                'title' => get_the_title($row->service_id) . ' - ' . $row->customer_name,
+                'start' => $row->appointment_date . 'T' . $row->appointment_time,
+                'end' => $row->appointment_date . 'T' . $row->appointment_time, // Ajuste se houver duração
+                'status' => $row->status,
+            );
+        }
+        wp_send_json_success($events);
     }
 }

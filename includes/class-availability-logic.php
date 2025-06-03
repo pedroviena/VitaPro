@@ -217,8 +217,8 @@ class VitaPro_Appointments_FSE_Availability_Logic {
      * Check if a time slot is already booked.
      */
     public function is_slot_booked( $professional_id, $date_str, $time_str, $duration_needed ) {
-        global $wpdb; // Adicionado global $wpdb
-        $table_name = $wpdb->prefix . 'vpa_appointments'; // Definido aqui
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'vpa_appointments';
 
         $query_conditions = array(
             $wpdb->prepare("appointment_date = %s", $date_str),

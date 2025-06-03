@@ -61,7 +61,6 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
         global $wpdb;
         $table = $wpdb->prefix . 'vpa_appointments';
 
-        // Sanitize and collect appointment data from $_POST
         $data = array(
             'service_id'      => intval($_POST['service_id']),
             'professional_id' => intval($_POST['professional_id']),
@@ -74,13 +73,13 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
             'notes'           => sanitize_textarea_field($_POST['appointment_notes']),
             'created_at'      => current_time('mysql', 1),
             'updated_at'      => current_time('mysql', 1),
-            // Adicione outros campos customizados conforme necessário
+            // ...custom_fields...
         );
 
         $wpdb->insert($table, $data);
         $appointment_id = $wpdb->insert_id;
 
-        // Crie o post CPT apenas para interface administrativa e relacione com o ID da tabela customizada
+        // Crie o CPT apenas como ponte/admin
         $cpt_id = wp_insert_post(array(
             'post_type'   => 'vpa_appointment',
             'post_status' => 'publish',
@@ -88,16 +87,9 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
             'meta_input'  => array('_vpa_custom_table_id' => $appointment_id),
         ));
 
-        // ...enviar e-mails e hooks...
-        $options = get_option('vitapro_appointments_settings', array());
-        $send_emails = isset($options['send_email_notifications']) ? (bool)$options['send_email_notifications'] : true;
-        if ($send_emails && $this->email_functions_instance) {
-            $this->email_functions_instance->send_new_appointment_emails($appointment_id);
-        }
         do_action('vitapro_appointment_created', $appointment_id);
 
-        // ...gerar $details_html...
-
+        // ...existing code...
         wp_send_json_success(array(
             'message' => __('Appointment booked successfully!', 'vitapro-appointments-fse'),
             'appointment_id' => $appointment_id,

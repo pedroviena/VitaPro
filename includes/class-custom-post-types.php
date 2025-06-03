@@ -296,36 +296,32 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
      * Content for appointment custom columns
      */
     public function appointment_column_content($column, $post_id) {
-        // As meta keys usadas aqui devem corresponder às salvas em includes/cpt/appointment-cpt.php
-        // e/ou na sua tabela customizada se você estiver migrando.
-        // Esta classe foca em CPTs, então usará get_post_meta.
+        // Buscar o ID da tabela customizada
+        $custom_table_id = get_post_meta($post_id, '_vpa_custom_table_id', true);
+        if (!$custom_table_id) { echo '—'; return; }
+        global $wpdb;
+        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}vpa_appointments WHERE id = %d", $custom_table_id));
+        if (!$appointment) { echo '—'; return; }
+
         switch ($column) {
             case 'vpa_service':
-                $service_id = get_post_meta($post_id, '_vpa_appointment_service_id', true); // Corrigido para _id
-                echo $service_id ? esc_html(get_the_title($service_id)) : '—';
+                echo $appointment->service_id ? esc_html(get_the_title($appointment->service_id)) : '—';
                 break;
-
             case 'vpa_professional':
-                $professional_id = get_post_meta($post_id, '_vpa_appointment_professional_id', true); // Corrigido para _id
-                echo $professional_id ? esc_html(get_the_title($professional_id)) : __('Any', 'vitapro-appointments-fse');
+                echo $appointment->professional_id ? esc_html(get_the_title($appointment->professional_id)) : __('Any', 'vitapro-appointments-fse');
                 break;
-
             case 'vpa_date_time':
-                $date = get_post_meta($post_id, '_vpa_appointment_date', true);
-                $time = get_post_meta($post_id, '_vpa_appointment_time', true);
                 $options = get_option('vitapro_appointments_main_settings', array());
                 $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
                 $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
-
-                if ($date && $time) {
-                    echo esc_html(date_i18n($date_format, strtotime($date))) . ' @ ' . esc_html(date_i18n($time_format, strtotime($time)));
+                if ($appointment->appointment_date && $appointment->appointment_time) {
+                    echo esc_html(date_i18n($date_format, strtotime($appointment->appointment_date))) . ' @ ' . esc_html(date_i18n($time_format, strtotime($appointment->appointment_time)));
                 } else {
                     echo '—';
                 }
                 break;
-
             case 'vpa_status':
-                $status = get_post_meta($post_id, '_vpa_appointment_status', true);
+                $status = $appointment->status;
                 $status_labels = array(
                     'pending'   => __('Pending', 'vitapro-appointments-fse'),
                     'confirmed' => __('Confirmed', 'vitapro-appointments-fse'),

@@ -185,3 +185,27 @@ function vitapro_render_appointment_item( $appointment, $allow_cancellation = fa
     <?php
     return ob_get_clean();
 }
+
+function render_user_appointments_custom_table($user_email, $type = 'upcoming', $limit = 10, $allow_cancellation = true) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'vpa_appointments';
+    $current_date = current_time('Y-m-d');
+    $current_time = current_time('H:i:s');
+
+    if ($type === 'upcoming') {
+        $where_clause = "WHERE customer_email = %s AND (appointment_date > %s OR (appointment_date = %s AND appointment_time > %s)) AND status != 'cancelled'";
+        $order_clause = "ORDER BY appointment_date ASC, appointment_time ASC";
+        $prepare_values = array($user_email, $current_date, $current_date, $current_time);
+    } else {
+        $where_clause = "WHERE customer_email = %s AND (appointment_date < %s OR (appointment_date = %s AND appointment_time <= %s))";
+        $order_clause = "ORDER BY appointment_date DESC, appointment_time DESC";
+        $prepare_values = array($user_email, $current_date, $current_date, $current_time);
+    }
+
+    $sql = "SELECT * FROM {$table_name} {$where_clause} {$order_clause} LIMIT %d";
+    $prepare_values[] = $limit;
+
+    $appointments = $wpdb->get_results($wpdb->prepare($sql, $prepare_values));
+
+    // ...existing code...
+}

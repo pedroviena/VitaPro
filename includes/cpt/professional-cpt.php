@@ -79,33 +79,32 @@ add_action( 'init', 'vitapro_appointments_register_professional_cpt', 0 );
  */
 function vitapro_add_professional_meta_boxes($post_type) {
     add_meta_box(
+        'vpa_professional_details',
+        __('Professional Details', 'vitapro-appointments-fse'),
+        'vitapro_render_professional_details_meta_box',
+        'vpa_professional',
+        'normal',
+        'high'
+    );
+    add_meta_box(
         'vpa_professional_schedule',
-        __( 'Working Schedule', 'vitapro-appointments-fse' ),
+        __('Schedule', 'vitapro-appointments-fse'),
         'vitapro_render_professional_schedule_meta_box',
         'vpa_professional',
-        'normal',
-        'high'
-    );
-
-    add_meta_box(
-        'vpa_professional_services',
-        __( 'Services Offered', 'vitapro-appointments-fse' ),
-        'vitapro_render_professional_services_meta_box',
-        'vpa_professional',
-        'normal',
-        'high'
-    );
-
-    add_meta_box(
-        'vpa_professional_custom_days_off',
-        __( 'Custom Days Off', 'vitapro-appointments-fse' ),
-        'vitapro_render_professional_custom_days_off_meta_box',
-        'vpa_professional',
-        'normal',
-        'high'
+        'side',
+        'default'
     );
 }
-add_action( 'add_meta_boxes', 'vitapro_add_professional_meta_boxes' );
+add_action('add_meta_boxes', 'vitapro_add_professional_meta_boxes');
+
+function vitapro_render_professional_details_meta_box($post) {
+    ?>
+    <div class="vpa-meta-row">
+        <label><?php _e('Title', 'vitapro-appointments-fse'); ?></label>
+        <input type="text" name="_vpa_professional_title" value="<?php echo esc_attr(get_post_meta($post->ID, '_vpa_professional_title', true)); ?>" />
+    </div>
+    <?php
+}
 
 /**
  * Render the Professional Schedule meta box.
@@ -133,40 +132,12 @@ function vitapro_render_professional_schedule_meta_box( $post ) {
     );
 
     ?>
-    <table class="form-table">
-        <?php foreach ( $days as $day_key => $day_label ) : ?>
-            <?php
-            $is_working = isset( $schedule[ $day_key ]['working'] ) ? $schedule[ $day_key ]['working'] : false;
-            $start_time = isset( $schedule[ $day_key ]['start'] ) ? $schedule[ $day_key ]['start'] : '09:00';
-            $end_time = isset( $schedule[ $day_key ]['end'] ) ? $schedule[ $day_key ]['end'] : '17:00';
-            $break_start = isset( $schedule[ $day_key ]['break_start'] ) ? $schedule[ $day_key ]['break_start'] : '';
-            $break_end = isset( $schedule[ $day_key ]['break_end'] ) ? $schedule[ $day_key ]['break_end'] : '';
-            ?>
-            <tr>
-                <th scope="row"><?php echo esc_html( $day_label ); ?></th>
-                <td>
-                    <label>
-                        <input type="checkbox" name="vpa_schedule[<?php echo esc_attr( $day_key ); ?>][working]" value="1" <?php checked( $is_working ); ?> />
-                        <?php _e( 'Working Day', 'vitapro-appointments-fse' ); ?>
-                    </label>
-                    <br><br>
-                    <label><?php _e( 'Start Time:', 'vitapro-appointments-fse' ); ?>
-                        <input type="time" name="vpa_schedule[<?php echo esc_attr( $day_key ); ?>][start]" value="<?php echo esc_attr( $start_time ); ?>" />
-                    </label>
-                    <label><?php _e( 'End Time:', 'vitapro-appointments-fse' ); ?>
-                        <input type="time" name="vpa_schedule[<?php echo esc_attr( $day_key ); ?>][end]" value="<?php echo esc_attr( $end_time ); ?>" />
-                    </label>
-                    <br><br>
-                    <label><?php _e( 'Break Start:', 'vitapro-appointments-fse' ); ?>
-                        <input type="time" name="vpa_schedule[<?php echo esc_attr( $day_key ); ?>][break_start]" value="<?php echo esc_attr( $break_start ); ?>" />
-                    </label>
-                    <label><?php _e( 'Break End:', 'vitapro-appointments-fse' ); ?>
-                        <input type="time" name="vpa_schedule[<?php echo esc_attr( $day_key ); ?>][break_end]" value="<?php echo esc_attr( $break_end ); ?>" />
-                    </label>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-    </table>
+    <div class="vpa-meta-row">
+        <label><?php _e('Monday Start', 'vitapro-appointments-fse'); ?></label>
+        <input type="time" name="_vpa_professional_schedule[monday][start]" value="<?php echo esc_attr( /* ... */ ); ?>" />
+        <!-- ... -->
+    </div>
+    <!-- ...outros dias... -->
     <?php
 }
 
@@ -336,3 +307,23 @@ function vitapro_save_professional_meta_data( $post_id ) {
     }
 }
 add_action( 'save_post', 'vitapro_save_professional_meta_data' );
+
+/**
+ * Enqueue admin scripts and styles.
+ *
+ * @param string $hook The current admin page hook.
+ * @return void
+ * @uses wp_enqueue_script(), wp_enqueue_style()
+ */
+function vitapro_enqueue_admin_scripts( $hook ) {
+    global $post_type;
+    if ( in_array( $post_type, array( 'vpa_professional' ) ) ) {
+        wp_enqueue_style( 'vpa-admin', VITAPRO_APPOINTMENTS_FSE_URL . 'assets/css/admin.css', array(), VITAPRO_APPOINTMENTS_FSE_VERSION );
+        wp_enqueue_script( 'vpa-admin', VITAPRO_APPOINTMENTS_FSE_URL . 'assets/js/admin.js', array( 'jquery', 'jquery-ui-datepicker', 'jquery-ui-slider' ), VITAPRO_APPOINTMENTS_FSE_VERSION, true );
+        wp_enqueue_style( 'wp-color-picker' );
+        wp_enqueue_script( 'wp-color-picker' );
+        wp_enqueue_script( 'jquery-ui-timepicker', VITAPRO_APPOINTMENTS_FSE_URL . 'assets/js/vendor/jquery-ui-timepicker-addon.js', array( 'jquery', 'jquery-ui-datepicker' ), VITAPRO_APPOINTMENTS_FSE_VERSION, true );
+        wp_enqueue_style( 'jquery-ui-timepicker', VITAPRO_APPOINTMENTS_FSE_URL . 'assets/css/vendor/jquery-ui-timepicker-addon.css', array(), VITAPRO_APPOINTMENTS_FSE_VERSION );
+    }
+}
+add_action( 'admin_enqueue_scripts', 'vitapro_enqueue_admin_scripts' );

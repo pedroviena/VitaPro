@@ -171,7 +171,7 @@ if ( ! function_exists( 'vitapro_appointments_get_option' ) ) {
      * @return mixed
      */
     function vitapro_appointments_get_option($key, $default = null) {
-        $settings = get_option('vitapro_appointments_main_settings', array());
+        $settings = get_option('vitapro_appointments_settings', array());
         return isset($settings[$key]) ? $settings[$key] : $default;
     }
 }
@@ -185,8 +185,24 @@ if ( ! function_exists( 'vitapro_appointments_update_option' ) ) {
      * @return bool
      */
     function vitapro_appointments_update_option($key, $value) {
-        $settings = get_option('vitapro_appointments_main_settings', array());
+        $settings = get_option('vitapro_appointments_settings', array());
         $settings[$key] = $value;
-        return update_option('vitapro_appointments_main_settings', $settings);
+        update_option('vitapro_appointments_settings', $settings);
+    }
+}
+
+// Exemplo de função para verificar se o paciente pode cancelar, lendo da tabela customizada:
+if ( ! function_exists( 'vitapro_can_patient_cancel_appointment' ) ) {
+    function vitapro_can_patient_cancel_appointment($appointment_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vpa_appointments';
+        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $appointment_id));
+        if (!$appointment) return false;
+        // Lógica de deadline, status, etc.
+        $options = vitapro_appointments_get_option('booking', array());
+        $deadline_hours = isset($options['vpa_cancellation_deadline']) ? (int)$options['vpa_cancellation_deadline'] : 24;
+        $appointment_time = strtotime($appointment->appointment_date . ' ' . $appointment->appointment_time);
+        $now = current_time('timestamp');
+        return ($appointment->status === 'pending' || $appointment->status === 'confirmed') && ($appointment_time - $now > $deadline_hours * 3600);
     }
 }

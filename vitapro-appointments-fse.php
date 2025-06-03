@@ -90,7 +90,6 @@ class VitaPro_Appointments_FSE {
         $required_files = array(
             'includes/class-custom-post-types.php',
             'includes/class-admin-settings.php', // Para adicionar menus e registrar settings
-            'includes/cpt/settings-page.php',     // Para a UI da página de configurações (VitaPro_Appointments_FSE_Settings_Page)
             'includes/class-blocks.php',
             'includes/class-ajax-handlers.php',    // Mantém a classe
             'includes/class-email-functions.php', 
@@ -124,9 +123,6 @@ class VitaPro_Appointments_FSE {
         // Instanciar classes controladoras principais
         if (class_exists('VitaPro_Appointments_FSE_Admin_Settings')) { // Adiciona menus
             new VitaPro_Appointments_FSE_Admin_Settings();
-        }
-        if (class_exists('VitaPro_Appointments_FSE_Settings_Page')) { // Lida com a UI da página de configurações
-            new VitaPro_Appointments_FSE_Settings_Page();
         }
         if (class_exists('VitaPro_Appointments_FSE_Frontend_Actions')) {
             new VitaPro_Appointments_FSE_Frontend_Actions();
@@ -347,15 +343,14 @@ class VitaPro_Appointments_FSE {
      * Add admin menu
      */
     public function add_admin_menu() {
-        // Main menu
         add_menu_page(
             __('VitaPro Appointments', 'vitapro-appointments-fse'),
             __('VitaPro Appointments', 'vitapro-appointments-fse'),
             'manage_options',
             'vitapro-appointments',
-            array($this, 'display_dashboard_page'),
+            array('VitaPro_Appointments_FSE_Overview_Page', 'display_overview_page'),
             'dashicons-calendar-alt',
-            30
+            2
         );
 
         // Dashboard submenu
@@ -625,6 +620,30 @@ class VitaPro_Appointments_FSE {
 
         // Set default options
         $this->set_default_options();
+
+        if (get_option('vitapro_appointments_settings') === false) {
+            add_option('vitapro_appointments_settings', array(
+                // valores padrão iniciais
+                'business_name' => '',
+                'business_email' => get_option('admin_email'),
+                'business_phone' => '',
+                'business_address' => '',
+                'timezone' => get_option('timezone_string', 'UTC'),
+                'date_format' => get_option('date_format'),
+                'time_format' => get_option('time_format'),
+                'currency' => 'USD',
+                'currency_symbol' => '$',
+                'currency_position' => 'before',
+                'default_appointment_duration' => 60,
+                'booking_advance_time' => 24,
+                'cancellation_time_limit' => 24,
+                'max_appointments_per_day' => 10,
+                'require_login' => false,
+                'auto_confirm_appointments' => false,
+                'send_email_notifications' => true,
+                'send_sms_notifications' => false,
+            ));
+        }
     }
 
     /**
@@ -714,6 +733,9 @@ class VitaPro_Appointments_FSE {
         }
     }
 }
+
+// Inclua a página de overview/presentation ANTES de qualquer uso da classe principal
+require_once plugin_dir_path(__FILE__) . 'includes/cpt/presentation.php';
 
 // Initialize the plugin
 VitaPro_Appointments_FSE::get_instance();

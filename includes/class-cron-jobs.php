@@ -41,6 +41,9 @@ class VitaPro_Appointments_FSE_Cron_Jobs {
      * Process appointment reminders.
      */
     public function process_appointment_reminders() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vpa_appointments';
+
         // Usar a função helper ou get_option para buscar as configurações do plugin
         $options = get_option('vitapro_appointments_settings', array()); // Melhor usar get_option diretamente
         $enable_reminders = isset($options['enable_reminders']) ? (bool)$options['enable_reminders'] : false;
@@ -54,34 +57,19 @@ class VitaPro_Appointments_FSE_Cron_Jobs {
         $target_time = current_time('timestamp') + ($reminder_lead_time_hours * 3600); 
         $target_date = date('Y-m-d', $target_time);
 
-        $appointments = get_posts(array(
-            'post_type'      => 'vpa_appointment',
-            'posts_per_page' => -1,
-            'meta_query'     => array(
-                'relation' => 'AND',
-                array(
-                    'key'     => '_vpa_appointment_date',
-                    'value'   => $target_date,
-                    'compare' => '=',
-                ),
-                array(
-                    'key'     => '_vpa_appointment_status',
-                    'value'   => array('confirmed'), 
-                    'compare' => 'IN',
-                ),
-                array(
-                    'key'     => '_vpa_reminder_sent', 
-                    'compare' => 'NOT EXISTS',
-                ),
-            ),
-        ));
+        $appointments = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM $table WHERE appointment_date = %s AND status = %s AND (ISNULL(reminder_sent) OR reminder_sent = '')",
+                $target_date, 'confirmed'
+            )
+        );
 
         foreach ($appointments as $appointment) {
-            $appointment_date_meta = get_post_meta($appointment->ID, '_vpa_appointment_date', true);
-            $appointment_time_meta = get_post_meta($appointment->ID, '_vpa_appointment_time', true);
+            $appointment_date_meta = $appointment->appointment_date;
+            $appointment_time_meta = $appointment->appointment_time;
             
             if (empty($appointment_date_meta) || empty($appointment_time_meta)) {
-                error_log("VitaPro Cron: Appointment ID {$appointment->ID} has incomplete date/time meta.");
+                error_log("VitaPro Cron: Appointment ID {$appointment->id} has incomplete date/time meta.");
                 continue;
             }
 
@@ -92,17 +80,13 @@ class VitaPro_Appointments_FSE_Cron_Jobs {
             if ($appointment_timestamp <= $target_time && $appointment_timestamp > current_time('timestamp')) {
                 $email_sent = false;
                 if ($this->email_functions_instance && method_exists($this->email_functions_instance, 'send_reminder_email')) {
-                    $email_sent = $this->email_functions_instance->send_reminder_email($appointment->ID);
-                } else {
-                     error_log("VitaPro Cron: Email functions instance or method not available for Appt ID {$appointment->ID}.");
+                    $this->email_functions_instance->send_reminder_email($appointment->id);
                 }
-                
-                if ($email_sent) {
-                    update_post_meta($appointment->ID, '_vpa_reminder_sent', current_time('mysql', 1)); // GMT
-                    error_log("VitaPro Cron: Reminder sent for Appointment ID {$appointment->ID}.");
-                } else {
-                    error_log("VitaPro Cron: Failed to send reminder for Appointment ID {$appointment->ID}.");
-                }
+                // Atualize a coluna reminder_sent na tabela customizada
+                $wpdb->update($table, array('reminder_sent' => current_time('mysql', 1)), array('id' => $appointment->id));
+                error_log("VitaPro Cron: Reminder sent for Appointment ID {$appointment->id}.");
+            } else {
+                error_log("VitaPro Cron: Appointment ID {$appointment->id} is not within the reminder lead time.");
             }
         }
     }
