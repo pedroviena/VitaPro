@@ -389,6 +389,15 @@ class VitaPro_Appointments_FSE_Dashboard {
     }
     
     /**
+     * Render dashboard page
+     */
+    public function render_dashboard_page() {
+        $stats = $this->get_dashboard_stats();
+        $recent_activity = $this->get_recent_activity();
+        include VITAPRO_APPOINTMENTS_FSE_PATH . 'templates/admin/dashboard.php';
+    }
+    
+    /**
      * Get dashboard stats
      */
     public function get_dashboard_stats() {

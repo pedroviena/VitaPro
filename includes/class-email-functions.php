@@ -222,6 +222,7 @@ class VitaPro_Appointments_FSE_Email_Functions {
         );
         $status_display = isset($status_labels[$status_raw]) ? $status_labels[$status_raw] : ucfirst($status_raw);
 
+        // Preencher custom_fields
         $custom_fields_display = array();
         $defined_custom_fields = isset($options['custom_fields']) ? $options['custom_fields'] : array();
         $appointment_custom_fields = !empty($appointment['custom_fields']) ? json_decode($appointment['custom_fields'], true) : array();
@@ -253,7 +254,7 @@ class VitaPro_Appointments_FSE_Email_Functions {
             'status_raw'         => $status_raw,     // Para lógica interna
             'site_name'          => get_bloginfo('name'),
             'site_url'           => home_url(),
-            'custom_fields'      => array(), // ...preencher se necessário...
+            'custom_fields'      => $custom_fields_display,
             'appointment_notes'  => $appointment['notes'],
             'duration'           => $service_duration . ' ' . __('minutes', 'vitapro-appointments-fse'),
             // Adicione quaisquer outros dados que seus templates possam precisar
@@ -320,6 +321,25 @@ class VitaPro_Appointments_FSE_Email_Functions {
     }
 
     /**
+     * Admin page: Email error logs
+     */
+    public static function render_email_error_logs_page() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions.', 'vitapro-appointments-fse'));
+        }
+        $log_file = WP_CONTENT_DIR . '/vitapro-email-errors.log';
+        echo '<div class="wrap"><h1>' . esc_html__('Email Error Logs', 'vitapro-appointments-fse') . '</h1>';
+        if (file_exists($log_file)) {
+            echo '<pre style="background:#fff;max-height:400px;overflow:auto;border:1px solid #ccc;padding:10px;">';
+            echo esc_html(file_get_contents($log_file));
+            echo '</pre>';
+        } else {
+            echo '<p>' . esc_html__('No email errors logged.', 'vitapro-appointments-fse') . '</p>';
+        }
+        echo '</div>';
+    }
+
+    /**
      * Log email error details.
      */
     private function log_email_error_details($to, $subject, $headers) {
@@ -335,6 +355,9 @@ class VitaPro_Appointments_FSE_Email_Functions {
         }
         $error_message .= " | To: {$to} | Subject: {$subject} | Headers: " . implode("\r\n", $headers);
         error_log($error_message);
+        // Adicional: log em arquivo separado
+        $log_file = WP_CONTENT_DIR . '/vitapro-email-errors.log';
+        @file_put_contents($log_file, date('Y-m-d H:i:s') . ' ' . $error_message . "\n", FILE_APPEND);
     }
     
     /**

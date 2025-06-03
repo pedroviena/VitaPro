@@ -92,7 +92,7 @@ class VitaPro_Appointments_FSE {
             'includes/class-admin-settings.php', // Para adicionar menus e registrar settings
             'includes/class-blocks.php',
             'includes/class-ajax-handlers.php',    // Mantém a classe
-            'includes/class-email-functions.php', 
+            'includes/class-email-functions.php',
             'includes/class-availability-logic.php',
             'includes/common/helpers.php',          // Arquivo de helpers
             'includes/class-cron-jobs.php',
@@ -348,7 +348,7 @@ class VitaPro_Appointments_FSE {
             __('VitaPro Appointments', 'vitapro-appointments-fse'),
             'manage_options',
             'vitapro-appointments',
-            array('VitaPro_Appointments_FSE_Overview_Page', 'display_overview_page'),
+            array(VitaPro_Appointments_FSE_Overview_Page::get_instance(), 'display_overview_page'), // LINHA CORRIGIDA
             'dashicons-calendar-alt',
             2
         );

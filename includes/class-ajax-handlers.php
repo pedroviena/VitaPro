@@ -62,15 +62,15 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
         $table = $wpdb->prefix . 'vpa_appointments';
 
         $data = array(
-            'service_id'      => intval($_POST['service_id']),
-            'professional_id' => intval($_POST['professional_id']),
-            'customer_name'   => sanitize_text_field($_POST['customer_name']),
-            'customer_email'  => sanitize_email($_POST['customer_email']),
-            'customer_phone'  => sanitize_text_field($_POST['customer_phone']),
-            'appointment_date'=> sanitize_text_field($_POST['appointment_date']),
-            'appointment_time'=> sanitize_text_field($_POST['appointment_time']),
+            'service_id'      => isset($_POST['service_id']) ? intval($_POST['service_id']) : 0,
+            'professional_id' => isset($_POST['professional_id']) ? intval($_POST['professional_id']) : 0,
+            'customer_name'   => isset($_POST['customer_name']) ? sanitize_text_field($_POST['customer_name']) : '',
+            'customer_email'  => isset($_POST['customer_email']) ? sanitize_email($_POST['customer_email']) : '',
+            'customer_phone'  => isset($_POST['customer_phone']) ? sanitize_text_field($_POST['customer_phone']) : '',
+            'appointment_date'=> isset($_POST['appointment_date']) ? sanitize_text_field($_POST['appointment_date']) : '',
+            'appointment_time'=> isset($_POST['appointment_time']) ? sanitize_text_field($_POST['appointment_time']) : '',
             'status'          => 'pending',
-            'notes'           => sanitize_textarea_field($_POST['appointment_notes']),
+            'notes'           => isset($_POST['appointment_notes']) ? sanitize_textarea_field($_POST['appointment_notes']) : '',
             'created_at'      => current_time('mysql', 1),
             'updated_at'      => current_time('mysql', 1),
             // ...custom_fields...
@@ -99,7 +99,8 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
     }
     
     public function cancel_appointment() {
-        if (!current_user_can('edit_posts')) {
+        // Permitir cancelamento tanto para admin quanto para o paciente autenticado
+        if (!is_user_logged_in() && !isset($_POST['frontend'])) {
             wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
             return;
         }
@@ -112,13 +113,24 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
 
         global $wpdb;
         $table = $wpdb->prefix . 'vpa_appointments';
-        $appointment_id = intval($_POST['appointment_id']);
+        $appointment_id = isset($_POST['appointment_id']) ? intval($_POST['appointment_id']) : 0;
 
         $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $appointment_id));
         if (!$appointment) {
             wp_send_json_error(__('Appointment not found.', 'vitapro-appointments-fse'));
         }
         $old_status = $appointment->status;
+
+        // Se for frontend, verifique se o usuário pode cancelar
+        if (isset($_POST['frontend']) && $_POST['frontend'] == '1') {
+            $current_user = wp_get_current_user();
+            if (!$current_user || $current_user->user_email !== $appointment->customer_email) {
+                wp_send_json_error(__('You do not have permission to cancel this appointment.', 'vitapro-appointments-fse'));
+            }
+            if (!function_exists('vitapro_can_patient_cancel_appointment') || !vitapro_can_patient_cancel_appointment($appointment_id)) {
+                wp_send_json_error(__('This appointment cannot be cancelled at this time.', 'vitapro-appointments-fse'));
+            }
+        }
 
         $wpdb->update($table, array(
             'status' => 'cancelled',
@@ -144,8 +156,8 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
 
         global $wpdb;
         $table = $wpdb->prefix . 'vpa_appointments';
-        $appointment_id = intval($_POST['appointment_id']);
-        $new_status = sanitize_text_field($_POST['new_status']);
+        $appointment_id = isset($_POST['appointment_id']) ? intval($_POST['appointment_id']) : 0;
+        $new_status = isset($_POST['new_status']) ? sanitize_text_field($_POST['new_status']) : '';
 
         $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $appointment_id));
         if (!$appointment) {

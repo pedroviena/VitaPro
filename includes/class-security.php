@@ -555,4 +555,13 @@ class VitaPro_Appointments_FSE_Security {
             }
         }
     }
+    
+    /**
+     * Secure query preparation
+     */
+    public function secure_query_preparation($query) {
+        // Exemplo de sanitização extra para queries dinâmicas
+        // Use apenas prepare() do $wpdb sempre que possível
+        return preg_replace('/[^a-zA-Z0-9_ ,.=<>!\'"%\(\)\-]/', '', $query);
+    }
 }

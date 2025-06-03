@@ -38,12 +38,12 @@ class VitaPro_Appointments_FSE_Overview_Page {
 
         add_submenu_page(
             $parent_slug,
-            __('Overview - VitaPro Appointments', 'vitapro-appointments-fse'), // Título da página
-            __('Overview', 'vitapro-appointments-fse'),                       // Título do menu
-            'manage_options',                                                 // Capability
-            $parent_slug,                                                     // Menu slug (mesmo do pai para ser a página padrão)
-            array($this, 'display_overview_page'),                            // Callback
-            0                                                                 // Posição (primeiro submenu)
+            __('Overview - VitaPro Appointments', 'vitapro-appointments-fse'),
+            __('Overview', 'vitapro-appointments-fse'),
+            'manage_options',
+            $parent_slug,
+            array($this, 'display_overview_page'),
+            0
         );
     }
 
@@ -617,7 +617,6 @@ class VitaPro_Appointments_FSE_Overview_Page {
      * Check email status
      */
     private function check_email_status() {
-        // Verifica se as configurações básicas de e-mail do plugin estão definidas
         $options = get_option('vitapro_appointments_settings', array());
         $from_email = isset($options['email_from_address']) ? $options['email_from_address'] : '';
         $admin_email = isset($options['email_admin_new_booking']) ? $options['email_admin_new_booking'] : '';
@@ -771,7 +770,6 @@ class VitaPro_Appointments_FSE_Overview_Page {
         check_ajax_referer('vpa_overview_nonce', 'nonce');
 
         // Simula um processo de configuração
-        // Em um cenário real, você criaria páginas padrão, definiria opções, etc.
         update_option('vitapro_quick_setup_completed', time());
 
         // Criação de serviço e profissional de exemplo (se não existirem)
@@ -843,7 +841,6 @@ class VitaPro_Appointments_FSE_Overview_Page {
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => __('Insufficient permissions.', 'vitapro-appointments-fse')), 403);
         }
-        // check_ajax_referer('vpa_dismiss_notice_nonce', 'nonce'); // Adicionar nonce
         $notice_id = isset($_POST['notice_id']) ? sanitize_key($_POST['notice_id']) : '';
         if ($notice_id) {
             update_user_meta(get_current_user_id(), 'dismissed_vpa_notice_' . $notice_id, true);
@@ -851,6 +848,5 @@ class VitaPro_Appointments_FSE_Overview_Page {
         }
         wp_send_json_error(array('message' => __('Invalid notice ID.', 'vitapro-appointments-fse')));
     }
-}
-// Não instancie aqui, deixe para o arquivo principal (vitapro-appointments-fse.php)
-?>
+} // Fim da classe VitaPro_Appointments_FSE_Overview_Page
+} // Fim do if (!class_exists(...))

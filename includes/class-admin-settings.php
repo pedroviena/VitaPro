@@ -101,7 +101,8 @@ class VitaPro_Appointments_FSE_Admin_Settings {
      */
     public function render_general_settings_page_callback() {
         if (function_exists('vitapro_appointments_settings_page_render')) {
-            vitapro_appointments_settings_page_render();
+            // Substitua por include de template se desejar
+            include VITAPRO_APPOINTMENTS_FSE_PATH . 'templates/admin/settings.php';
         } else {
             echo '<div class="wrap"><h1>' . esc_html__('Error: Settings page render function not found.', 'vitapro-appointments-fse') . '</h1></div>';
         }

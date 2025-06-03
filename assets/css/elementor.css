@@ -2,6 +2,646 @@
  * VitaPro Appointments FSE Elementor Styles
  */
 
+/* Modern VitaPro Appointments FSE Elementor Widget Styles */
+.vpa-booking-form,
+.vpa-service-list,
+.vpa-professional-list,
+.vpa-availability-calendar,
+.vpa-my-appointments {
+    font-family: var(--e-global-typography-primary-font-family, 'Inter', Arial, sans-serif);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.vpa-btn,
+.vpa-btn-cancel,
+.vpa-btn-book {
+    background: #1e88e5;
+    color: #fff;
+    border-radius: 4px;
+    border: none;
+    padding: 10px 24px;
+    font-weight: 600;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+.vpa-btn:hover,
+.vpa-btn-cancel:hover,
+.vpa-btn-book:hover {
+    background: #1565c0;
+}
+
+.vpa-appointment-card,
+.vpa-service-card,
+.vpa-professional-card {
+    border: 1px solid #e3e3e3;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    background: #fafbfc;
+    padding: 18px;
+}
+
+.vpa-status-badge,
+.vpa-appointment-status {
+    border-radius: 12px;
+    padding: 2px 12px;
+    font-size: 0.95em;
+    font-weight: 500;
+    background: #e3f2fd;
+    color: #1976d2;
+    margin-left: 8px;
+}
+
+.vpa-status-confirmed { background: #c8e6c9; color: #388e3c; }
+.vpa-status-pending { background: #fff9c4; color: #fbc02d; }
+.vpa-status-cancelled { background: #ffcdd2; color: #d32f2f; }
+.vpa-status-completed { background: #b2dfdb; color: #00796b; }
+
+.vpa-calendar-header,
+.vpa-calendar-legend {
+    margin-bottom: 16px;
+}
+
+.vpa-calendar-title {
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.vpa-legend-color.vpa-available { background: #43a047; }
+.vpa-legend-color.vpa-unavailable { background: #e0e0e0; }
+.vpa-legend-color.vpa-selected { background: #1976d2; }
+
+.vpa-legend-color {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.vpa-form-row label {
+    font-weight: 500;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.vpa-form-row input,
+.vpa-form-row textarea,
+.vpa-form-row select {
+    width: 100%;
+    border: 1px solid #bdbdbd;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 10px;
+    font-size: 1em;
+}
+
+.vpa-form-row input:focus,
+.vpa-form-row textarea:focus,
+.vpa-form-row select:focus {
+    border-color: #1976d2;
+    outline: none;
+}
+
+.vpa-appointment-actions {
+    margin-top: 12px;
+}
+
+.vpa-success-icon {
+    color: #43a047;
+    font-size: 2em;
+    margin-bottom: 8px;
+}
+
+/* Elementor Widget Preview Styles */
+.vpa-elementor-preview {
+    border: 2px dashed #e1e5e9;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.vpa-elementor-preview::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255, 255, 255, 0.1) 10px,
+        rgba(255, 255, 255, 0.1) 20px
+    );
+    pointer-events: none;
+}
+
+.vpa-elementor-preview-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.vpa-elementor-preview-title i {
+    font-size: 20px;
+    color: #6c757d;
+}
+
+.vpa-elementor-preview-description {
+    font-size: 14px;
+    color: #6c757d;
+    line-height: 1.5;
+    max-width: 300px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Elementor Editor Specific Styles */
+.elementor-editor-active .vpa-booking-form,
+.elementor-editor-active .vpa-service-list,
+.elementor-editor-active .vpa-professional-list,
+.elementor-editor-active .vpa-calendar,
+.elementor-editor-active .vpa-my-appointments {
+    pointer-events: none;
+}
+
+.elementor-editor-active .vpa-booking-form::after,
+.elementor-editor-active .vpa-service-list::after,
+.elementor-editor-active .vpa-professional-list::after,
+.elementor-editor-active .vpa-calendar::after,
+.elementor-editor-active .vpa-my-appointments::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Widget Container Styles */
+.elementor-widget-vitapro-booking-form .elementor-widget-container,
+.elementor-widget-vitapro-service-list .elementor-widget-container,
+.elementor-widget-vitapro-professional-list .elementor-widget-container,
+.elementor-widget-vitapro-availability-calendar .elementor-widget-container,
+.elementor-widget-vitapro-my-appointments .elementor-widget-container {
+    position: relative;
+}
+
+/* Booking Form Widget Styles */
+.elementor-widget-vitapro-booking-form .vpa-booking-form {
+    background: var(--e-global-color-background, #ffffff);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.elementor-widget-vitapro-booking-form .vpa-form-step {
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.elementor-widget-vitapro-booking-form .vpa-form-step:last-child {
+    border-bottom: none;
+}
+
+.elementor-widget-vitapro-booking-form .vpa-btn {
+    transition: all 0.3s ease;
+    border-radius: 6px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.elementor-widget-vitapro-booking-form .vpa-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Service List Widget Styles */
+.elementor-widget-vitapro-service-list .vpa-service-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-grid.columns-1 {
+    grid-template-columns: 1fr;
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-grid.columns-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-grid.columns-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-grid.columns-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-card {
+    background: var(--e-global-color-background, #ffffff);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-image img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-card:hover .vpa-service-image img {
+    transform: scale(1.05);
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-content {
+    padding: 20px;
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--e-global-color-text, #333333);
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-description {
+    color: var(--e-global-color-secondary, #666666);
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--e-global-color-primary, #007cba);
+}
+
+.elementor-widget-vitapro-service-list .vpa-service-duration {
+    font-size: 14px;
+    color: var(--e-global-color-secondary, #666666);
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Professional List Widget Styles */
+.elementor-widget-vitapro-professional-list .vpa-professional-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-grid.columns-1 {
+    grid-template-columns: 1fr;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-grid.columns-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-grid.columns-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-grid.columns-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-card {
+    background: var(--e-global-color-background, #ffffff);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-image {
+    position: relative;
+    padding: 20px 20px 0;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-image img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #ffffff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-card:hover .vpa-professional-image img {
+    transform: scale(1.05);
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-content {
+    padding: 15px 20px 20px;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--e-global-color-text, #333333);
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-title {
+    font-size: 14px;
+    color: var(--e-global-color-primary, #007cba);
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-bio {
+    color: var(--e-global-color-secondary, #666666);
+    line-height: 1.6;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-professional-services {
+    margin-bottom: 15px;
+}
+
+.elementor-widget-vitapro-professional-list .vpa-service-tag {
+    display: inline-block;
+    background: #e9ecef;
+    color: #495057;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin: 2px;
+}
+
+/* Calendar Widget Styles */
+.elementor-widget-vitapro-availability-calendar .vpa-calendar {
+    background: var(--e-global-color-background, #ffffff);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-header {
+    background: var(--e-global-color-primary, #007cba);
+    color: #ffffff;
+    padding: 20px;
+    text-align: center;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-nav button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-nav button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-month {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: #e9ecef;
+    margin: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-day {
+    background: #ffffff;
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-day:hover {
+    background: #f8f9fa;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-day.available {
+    background: #d4edda;
+    color: #155724;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-day.available:hover {
+    background: #c3e6cb;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-day.unavailable {
+    background: #f8d7da;
+    color: #721c24;
+    cursor: not-allowed;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-day.selected {
+    background: var(--e-global-color-primary, #007cba);
+    color: #ffffff;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-calendar-legend {
+    padding: 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.elementor-widget-vitapro-availability-calendar .vpa-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+/* My Appointments Widget Styles */
+.elementor-widget-vitapro-my-appointments .vpa-my-appointments {
+    background: var(--e-global-color-background, #ffffff);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointments-section {
+    padding: 20px;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointments-section:not(:last-child) {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointments-heading {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: var(--e-global-color-text, #333333);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointments-heading::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: var(--e-global-color-primary, #007cba);
+    border-radius: 2px;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-card:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-card.status-confirmed {
+    border-left-color: #28a745;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-card.status-pending {
+    border-left-color: #ffc107;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-card.status-cancelled {
+    border-left-color: #dc3545;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-service {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--e-global-color-text, #333333);
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-status {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    color: var(--e-global-color-secondary, #666666);
+    font-size: 14px;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-appointment-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-btn-cancel {
+    background: #dc3545;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.elementor-widget-vitapro-my-appointments .vpa-btn-cancel:hover {
+    background: #c82333;
+}
+
 /* Elementor Widget Preview Styles */
 .vpa-elementor-preview {
     border: 2px dashed #e1e5e9;

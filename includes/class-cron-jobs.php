@@ -91,43 +91,20 @@ class VitaPro_Appointments_FSE_Cron_Jobs {
         }
     }
 
-    // ... (cleanup_old_appointments, schedule_events, unschedule_events permanecem os mesmos da última vez)
     public function cleanup_old_appointments() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vpa_appointments';
         $options = get_option('vitapro_appointments_settings', array());
         $cleanup_days = apply_filters('vitapro_appointment_cleanup_days', isset($options['cleanup_days']) ? (int)$options['cleanup_days'] : 365); 
         $cleanup_date = date('Y-m-d', strtotime('-' . $cleanup_days . ' days', current_time('timestamp')));
-        
-        $old_appointments = get_posts(array(
-            'post_type'      => 'vpa_appointment',
-            'posts_per_page' => -1,
-            'date_query'    => array( // Usar date_query para datas
-                array(
-                    'column' => 'post_date_gmt', // Ou a meta_key se você guarda created_at como meta
-                    'before' => $cleanup_date, 
-                ),
-            ),
-            'meta_query'     => array(
-                 array(
-                    'key'     => '_vpa_appointment_status',
-                    'value'   => array('completed', 'cancelled', 'no-show', 'archived'),
-                    'compare' => 'IN',
-                ),
-            ),
-        ));
 
-        foreach ($old_appointments as $appointment_post) {
-            // Se você estiver usando a tabela customizada, precisaria buscar os IDs da tabela e deletar lá.
-            // Se estiver usando apenas CPT, pode deletar o post.
-            // Para marcar como arquivado (se estiver usando CPT com meta status):
-            // update_post_meta($appointment_post->ID, '_vpa_appointment_status', 'archived');
-            
-            // Se usando a tabela customizada e quer deletar:
-            // global $wpdb;
-            // $table_name = $wpdb->prefix . 'vpa_appointments';
-            // $wpdb->delete($table_name, array('id' => $appointment_post->ID /* ou a coluna correspondente */));
-
-            error_log("VitaPro Cron: Archived/Deleted old appointment ID {$appointment_post->ID}.");
-        }
+        // Exclui agendamentos antigos da tabela customizada
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM $table WHERE appointment_date < %s AND status IN ('completed', 'cancelled', 'no-show', 'archived')",
+                $cleanup_date
+            )
+        );
     }
 
     public static function schedule_events() {

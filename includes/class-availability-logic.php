@@ -309,10 +309,15 @@ class VitaPro_Appointments_FSE_Availability_Logic {
         if (empty($holidays)) {
             return false;
         }
-        
-        // Lógica para verificar se o feriado se aplica ao profissional
-        // (Esta parte precisa ser implementada com base em como você armazena a quais profissionais um feriado se aplica)
-        return true; // Simplificado: se há feriado, assume que afeta
+
+        // Verifica se o feriado afeta o profissional
+        foreach ($holidays as $holiday) {
+            $affected = get_post_meta($holiday->ID, '_vpa_holiday_professionals', true);
+            if (empty($affected) || $affected === 'all' || (is_array($affected) && in_array($professional_id, $affected))) {
+                return true;
+            }
+        }
+        return false;
     }
     
     private function get_effective_schedule_for_day($professional_id, $day_of_week_lowercase) {

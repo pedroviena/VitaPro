@@ -1,8 +1,7 @@
 <?php
 /**
  * Elementor Integration
- * 
- * Handles Elementor widgets integration for VitaPro Appointments FSE.
+ * * Handles Elementor widgets integration for VitaPro Appointments FSE.
  *
  * Integrates VitaPro Appointments FSE with Elementor widgets.
  *
@@ -78,35 +77,35 @@ class VitaPro_Appointments_FSE_Elementor_Integration {
             error_log('VitaPro Appointments FSE Error: My Appointments Widget file not found at: ' . $my_appointments_widget_file);
         }
 
-        // Registrar widgets com verificação de classe
-        if (class_exists('VitaPro_Elementor_Booking_Form_Widget')) {
-            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \VitaPro_Elementor_Booking_Form_Widget());
+        // Registrar widgets com verificação de classe (NOMES DE CLASSE CORRIGIDOS AQUI)
+        if (class_exists('Booking_Form_Widget')) { // Corrigido de VitaPro_Elementor_Booking_Form_Widget
+            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \Booking_Form_Widget()); // Corrigido de VitaPro_Elementor_Booking_Form_Widget
         } else {
-            error_log('VitaPro Appointments FSE Error: Class VitaPro_Elementor_Booking_Form_Widget not found after inclusion. Check file content or syntax.');
+            error_log('VitaPro Appointments FSE Error: Class Booking_Form_Widget not found after inclusion. Check file content or syntax.');
         }
 
-        if (class_exists('VitaPro_Elementor_Service_List_Widget')) {
-            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \VitaPro_Elementor_Service_List_Widget());
+        if (class_exists('Service_List_Widget')) { // Corrigido de VitaPro_Elementor_Service_List_Widget
+            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \Service_List_Widget()); // Corrigido de VitaPro_Elementor_Service_List_Widget
         } else {
-            error_log('VitaPro Appointments FSE Error: Class VitaPro_Elementor_Service_List_Widget not found after inclusion. Check file content or syntax.');
+            error_log('VitaPro Appointments FSE Error: Class Service_List_Widget not found after inclusion. Check file content or syntax.');
         }
 
-        if (class_exists('VitaPro_Elementor_Professional_List_Widget')) {
-            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \VitaPro_Elementor_Professional_List_Widget());
+        if (class_exists('Professional_List_Widget')) { // Corrigido de VitaPro_Elementor_Professional_List_Widget
+            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \Professional_List_Widget()); // Corrigido de VitaPro_Elementor_Professional_List_Widget
         } else {
-            error_log('VitaPro Appointments FSE Error: Class VitaPro_Elementor_Professional_List_Widget not found after inclusion. Check file content or syntax.');
+            error_log('VitaPro Appointments FSE Error: Class Professional_List_Widget not found after inclusion. Check file content or syntax.');
         }
 
-        if (class_exists('VitaPro_Elementor_Availability_Calendar_Widget')) {
-            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \VitaPro_Elementor_Availability_Calendar_Widget());
+        if (class_exists('Availability_Calendar_Widget')) { // Corrigido de VitaPro_Elementor_Availability_Calendar_Widget
+            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \Availability_Calendar_Widget()); // Corrigido de VitaPro_Elementor_Availability_Calendar_Widget
         } else {
-            error_log('VitaPro Appointments FSE Error: Class VitaPro_Elementor_Availability_Calendar_Widget not found after inclusion. Check file content or syntax.');
+            error_log('VitaPro Appointments FSE Error: Class Availability_Calendar_Widget not found after inclusion. Check file content or syntax.');
         }
 
-        if (class_exists('VitaPro_Elementor_My_Appointments_Widget')) {
-            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \VitaPro_Elementor_My_Appointments_Widget());
+        if (class_exists('My_Appointments_Widget')) { // Corrigido de VitaPro_Elementor_My_Appointments_Widget
+            \Elementor\Plugin::instance()->widgets_manager->register_widget_type(new \My_Appointments_Widget()); // Corrigido de VitaPro_Elementor_My_Appointments_Widget
         } else {
-            error_log('VitaPro Appointments FSE Error: Class VitaPro_Elementor_My_Appointments_Widget not found after inclusion. Check file content or syntax.');
+            error_log('VitaPro Appointments FSE Error: Class My_Appointments_Widget not found after inclusion. Check file content or syntax.');
         }
     }
     
@@ -128,6 +127,16 @@ class VitaPro_Appointments_FSE_Elementor_Integration {
      */
     public function enqueue_elementor_styles() {
         wp_enqueue_style('vitapro-appointments-fse-frontend');
+        // O Elementor CSS já está sendo enfileirado aqui e tem uma dependência no frontend.
+        // Se o seu `elementor.css` contém as regras de estilo específicas para sobrescrever
+        // ou complementar o Elementor, ele deve funcionar.
+        // Certifique-se de que `vitapro-appointments-fse-elementor` seja enfileirado após o frontend.
+        wp_enqueue_style(
+            'vitapro-appointments-fse-elementor',
+            VITAPRO_APPOINTMENTS_FSE_URL . 'assets/css/elementor.css',
+            array('vitapro-appointments-fse-frontend'), // Dependência para garantir a ordem de carregamento
+            VITAPRO_APPOINTMENTS_FSE_VERSION
+        );
     }
     
     /**

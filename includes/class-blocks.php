@@ -615,7 +615,8 @@ class VitaPro_Appointments_FSE_Blocks {
             
             if ($type === 'upcoming' && $allow_cancellation && in_array($appointment->status, array('pending', 'confirmed'))) {
                 echo '<div class="vpa-appointment-actions">';
-                echo '<button type="button" class="vpa-btn vpa-btn-cancel" data-appointment-id="' . esc_attr($appointment->id) . '">' . __('Cancel Appointment', 'vitapro-appointments-fse') . '</button>';
+                // Botão AJAX para cancelar
+                echo '<button type="button" class="vpa-btn vpa-btn-cancel" data-appointment-id="' . esc_attr($appointment->id) . '" data-nonce="' . esc_attr(wp_create_nonce('vpa_cancel_appointment_nonce')) . '">' . __('Cancel Appointment', 'vitapro-appointments-fse') . '</button>';
                 echo '</div>';
             }
             
