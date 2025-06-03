@@ -85,92 +85,91 @@ class VitaPro_Appointments_FSE {
     /**
      * Load plugin dependencies
      */
-// Em vitapro-appointments-fse.php, dentro da classe VitaPro_Appointments_FSE
-private function load_dependencies() {
-    // Define required files
-    $required_files = array(
-        'includes/class-custom-post-types.php',
-        'includes/class-admin-settings.php', // Para adicionar menus e registrar settings
-        'includes/cpt/settings-page.php',     // Para a UI da página de configurações (VitaPro_Appointments_FSE_Settings_Page)
-        'includes/class-blocks.php',
-        'includes/class-ajax-handlers.php',    // Mantém a classe
-        'includes/class-email-functions.php', 
-        'includes/class-availability-logic.php',
-        'includes/common/helpers.php',          // Arquivo de helpers
-        'includes/class-cron-jobs.php',
-        'includes/class-frontend-actions.php',
-        'includes/class-security.php',
-        'includes/class-audit-log.php',
-        'includes/class-backup-recovery.php',
-        'includes/class-notifications.php',
-        'includes/class-reports.php',
-        'includes/class-dashboard.php'        // Para a página de Dashboard/Analytics
-    );
-    // REMOVIDO: 'includes/ajax-handlers.php', (o arquivo procedural)
+    private function load_dependencies() {
+        // Define required files
+        $required_files = array(
+            'includes/class-custom-post-types.php',
+            'includes/class-admin-settings.php', // Para adicionar menus e registrar settings
+            'includes/cpt/settings-page.php',     // Para a UI da página de configurações (VitaPro_Appointments_FSE_Settings_Page)
+            'includes/class-blocks.php',
+            'includes/class-ajax-handlers.php',    // Mantém a classe
+            'includes/class-email-functions.php', 
+            'includes/class-availability-logic.php',
+            'includes/common/helpers.php',          // Arquivo de helpers
+            'includes/class-cron-jobs.php',
+            'includes/class-frontend-actions.php',
+            'includes/class-security.php',
+            'includes/class-audit-log.php',
+            'includes/class-backup-recovery.php',
+            'includes/class-notifications.php',
+            'includes/class-reports.php',
+            'includes/class-dashboard.php'        // Para a página de Dashboard/Analytics
+        );
+        // REMOVIDO: 'includes/ajax-handlers.php', (o arquivo procedural)
 
-    foreach ($required_files as $file) {
-        $file_path = VITAPRO_APPOINTMENTS_FSE_PATH . $file;
-        if (file_exists($file_path)) {
-            require_once $file_path;
+        foreach ($required_files as $file) {
+            $file_path = VITAPRO_APPOINTMENTS_FSE_PATH . $file;
+            if (file_exists($file_path)) {
+                require_once $file_path;
+            }
         }
-    }
 
-    if (did_action('elementor/loaded')) {
-        $elementor_file = VITAPRO_APPOINTMENTS_FSE_PATH . 'includes/elementor/class-elementor-integration.php';
-        if (file_exists($elementor_file)) {
-            require_once $elementor_file;
+        if (did_action('elementor/loaded')) {
+            $elementor_file = VITAPRO_APPOINTMENTS_FSE_PATH . 'includes/elementor/class-elementor-integration.php';
+            if (file_exists($elementor_file)) {
+                require_once $elementor_file;
+            }
         }
-    }
 
-    // Instanciar classes controladoras principais
-    if (class_exists('VitaPro_Appointments_FSE_Admin_Settings')) { // Adiciona menus
-        new VitaPro_Appointments_FSE_Admin_Settings();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Settings_Page')) { // Lida com a UI da página de configurações
-        new VitaPro_Appointments_FSE_Settings_Page();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Frontend_Actions')) {
-        new VitaPro_Appointments_FSE_Frontend_Actions();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Ajax_Handlers')) {
-        new VitaPro_Appointments_FSE_Ajax_Handlers();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Cron_Jobs')) {
-        new VitaPro_Appointments_FSE_Cron_Jobs();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Email_Functions')) { // Se ela tiver hooks no construtor
-        new VitaPro_Appointments_FSE_Email_Functions();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Blocks')) {
-        new VitaPro_Appointments_FSE_Blocks();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Dashboard')) {
-        new VitaPro_Appointments_FSE_Dashboard();
-    }
-    // Outras classes como Security, AuditLog, etc., são instanciadas se necessário ou se
-    // elas registram seus próprios hooks nos seus construtores.
-    // Por exemplo, se a classe Security precisa rodar no init:
-    if (class_exists('VitaPro_Appointments_FSE_Security')) {
-        new VitaPro_Appointments_FSE_Security(); // Se o construtor dela tiver add_action('init', ...)
-    }
-     if (class_exists('VitaPro_Appointments_FSE_Audit_Log')) {
-        new VitaPro_Appointments_FSE_Audit_Log();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Backup_Recovery')) {
-        new VitaPro_Appointments_FSE_Backup_Recovery();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Notifications')) {
-        new VitaPro_Appointments_FSE_Notifications();
-    }
-    if (class_exists('VitaPro_Appointments_FSE_Reports')) {
-        new VitaPro_Appointments_FSE_Reports();
-    }
-     if (class_exists('VitaPro_Appointments_FSE_Availability_Logic')) {
-        new VitaPro_Appointments_FSE_Availability_Logic(); // Se tiver hooks AJAX próprios
-    }
+        // Instanciar classes controladoras principais
+        if (class_exists('VitaPro_Appointments_FSE_Admin_Settings')) { // Adiciona menus
+            new VitaPro_Appointments_FSE_Admin_Settings();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Settings_Page')) { // Lida com a UI da página de configurações
+            new VitaPro_Appointments_FSE_Settings_Page();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Frontend_Actions')) {
+            new VitaPro_Appointments_FSE_Frontend_Actions();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Ajax_Handlers')) {
+            new VitaPro_Appointments_FSE_Ajax_Handlers();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Cron_Jobs')) {
+            new VitaPro_Appointments_FSE_Cron_Jobs();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Email_Functions')) { // Se ela tiver hooks no construtor
+            new VitaPro_Appointments_FSE_Email_Functions();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Blocks')) {
+            new VitaPro_Appointments_FSE_Blocks();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Dashboard')) {
+            new VitaPro_Appointments_FSE_Dashboard();
+        }
+        // Outras classes como Security, AuditLog, etc., são instanciadas se necessário ou se
+        // elas registram seus próprios hooks nos seus construtores.
+        // Por exemplo, se a classe Security precisa rodar no init:
+        if (class_exists('VitaPro_Appointments_FSE_Security')) {
+            new VitaPro_Appointments_FSE_Security(); // Se o construtor dela tiver add_action('init', ...)
+        }
+         if (class_exists('VitaPro_Appointments_FSE_Audit_Log')) {
+            new VitaPro_Appointments_FSE_Audit_Log();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Backup_Recovery')) {
+            new VitaPro_Appointments_FSE_Backup_Recovery();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Notifications')) {
+            new VitaPro_Appointments_FSE_Notifications();
+        }
+        if (class_exists('VitaPro_Appointments_FSE_Reports')) {
+            new VitaPro_Appointments_FSE_Reports();
+        }
+         if (class_exists('VitaPro_Appointments_FSE_Availability_Logic')) {
+            new VitaPro_Appointments_FSE_Availability_Logic(); // Se tiver hooks AJAX próprios
+        }
 
 
-}
+    }
 
     /**
      * Register custom post types
@@ -516,8 +515,24 @@ private function load_dependencies() {
      */
     public function enqueue_admin_assets($hook) {
         // Only load on plugin pages
+        $post_type = '';
+        if (isset($_GET['post_type'])) {
+            $post_type = sanitize_text_field($_GET['post_type']);
+        } elseif (isset($_GET['post'])) {
+            $post_id = intval($_GET['post']);
+            $post = get_post($post_id);
+            if ($post) {
+                $post_type = $post->post_type;
+            }
+        } elseif (function_exists('get_current_screen')) {
+            $screen = get_current_screen();
+            if ($screen && isset($screen->post_type)) {
+                $post_type = $screen->post_type;
+            }
+        }
+
         if (strpos($hook, 'vitapro-appointments') === false &&
-            !in_array(get_post_type(), array('vpa_service', 'vpa_professional', 'vpa_appointment', 'vpa_holiday'))) {
+            !in_array($post_type, array('vpa_service', 'vpa_professional', 'vpa_appointment', 'vpa_holiday'))) {
             return;
         }
 
