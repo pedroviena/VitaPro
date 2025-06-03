@@ -1,7 +1,6 @@
 <?php
 /**
  * Email Functions
- * 
  * Handles advanced email functionality for VitaPro Appointments FSE.
  */
 
@@ -15,8 +14,13 @@ class VitaPro_Appointments_FSE_Email_Functions {
      * Constructor
      */
     public function __construct() {
-        add_action('vitapro_appointment_created', array($this, 'send_new_appointment_emails'));
-        add_action('vitapro_appointment_status_changed', array($this, 'send_status_change_emails'), 10, 3);
+        // Estes hooks garantem que os e-mails sejam enviados automaticamente quando essas ações ocorrem.
+        add_action('vitapro_appointment_created', array($this, 'send_new_appointment_emails_on_creation'), 10, 1);
+        add_action('vitapro_appointment_status_changed', array($this, 'send_status_change_emails_on_status_change'), 10, 3);
+        
+        // Hook para o e-mail de lembrete (o cron job irá chamar um método público desta classe)
+        // add_action('vitapro_send_appointment_reminder_hook', array($this, 'send_reminder_email'), 10, 1);
+
         add_filter('wp_mail_content_type', array($this, 'set_html_content_type'));
         add_action('wp_mail_failed', array($this, 'log_email_error'));
     }
@@ -29,551 +33,340 @@ class VitaPro_Appointments_FSE_Email_Functions {
     }
     
     /**
-     * Send new appointment emails
+     * Wrapper para enviar e-mails de novo agendamento quando a ação 'vitapro_appointment_created' é disparada.
+     */
+    public function send_new_appointment_emails_on_creation($appointment_id) {
+        $this->send_new_appointment_emails($appointment_id);
+    }
+
+    /**
+     * Wrapper para enviar e-mails de mudança de status quando a ação 'vitapro_appointment_status_changed' é disparada.
+     */
+    public function send_status_change_emails_on_status_change($appointment_id, $new_status, $old_status) {
+        // Evitar envio duplicado se a chamada já for de dentro desta classe
+        if (did_action('vitapro_sending_' . $new_status . '_email_for_' . $appointment_id) > 1) {
+            return false;
+        }
+        do_action('vitapro_sending_' . $new_status . '_email_for_' . $appointment_id);
+
+        $this->send_status_change_emails($appointment_id, $new_status, $old_status);
+    }
+
+    /**
+     * Send new appointment emails (admin and patient)
      */
     public function send_new_appointment_emails($appointment_id) {
-        $appointment = $this->get_appointment_data($appointment_id);
-        
-        if (!$appointment) {
-            return false;
+        $appointment_data = $this->get_appointment_email_data($appointment_id);
+        if (!$appointment_data) return false;
+
+        $options = get_option('vitapro_appointments_settings', array());
+        $send_emails = isset($options['send_email_notifications']) ? (bool)$options['send_email_notifications'] : true;
+        $enable_admin_notification = isset($options['enable_admin_notification']) ? (bool)$options['enable_admin_notification'] : true;
+        $enable_patient_confirmation = isset($options['enable_patient_confirmation']) ? (bool)$options['enable_patient_confirmation'] : true;
+
+
+        if (!$send_emails) return false;
+
+        $results = array();
+
+        // Admin Notification
+        if ($enable_admin_notification) {
+            $admin_email = isset($options['email_admin_new_booking']) && !empty($options['email_admin_new_booking']) ? $options['email_admin_new_booking'] : get_option('admin_email');
+            $subject_admin = sprintf(__('New Appointment Booking - %s', 'vitapro-appointments-fse'), $appointment_data['service_name']);
+            $message_admin = $this->render_email_template('new-booking-admin', $appointment_data);
+            $results['admin'] = $this->send_email($admin_email, $subject_admin, $message_admin);
+        }
+
+        // Patient Confirmation
+        if ($enable_patient_confirmation && !empty($appointment_data['patient_email'])) {
+            $subject_patient = sprintf(__('Appointment Confirmation - %s', 'vitapro-appointments-fse'), $appointment_data['service_name']);
+            $message_patient = $this->render_email_template('new-booking-patient', $appointment_data);
+            $attachments = array(); // Adicionar anexos .ics se necessário
+            $results['patient'] = $this->send_email($appointment_data['patient_email'], $subject_patient, $message_patient, array(), $attachments);
         }
         
-        $general_settings = get_option('vitapro_appointments_general_settings', array());
-        $send_emails = isset($general_settings['send_email_notifications']) ? $general_settings['send_email_notifications'] : true;
-        
-        if (!$send_emails) {
-            return false;
-        }
-        
-        // Send admin notification
-        $this->send_admin_new_booking_email($appointment);
-        
-        // Send customer confirmation
-        $this->send_customer_confirmation_email($appointment);
-        
-        // Schedule reminder email
-        $this->schedule_reminder_email($appointment);
-        
-        return true;
+        // Não agendar lembrete aqui, o cron job fará isso periodicamente.
+        return $results;
     }
     
     /**
      * Send status change emails
      */
-    public function send_status_change_emails($appointment_id, $new_status, $old_status) {
-        $appointment = $this->get_appointment_data($appointment_id);
-        
-        if (!$appointment) {
-            return false;
-        }
-        
+    public function send_status_change_emails($appointment_id, $new_status, $old_status = '') {
+        $appointment_data = $this->get_appointment_email_data($appointment_id);
+        if (!$appointment_data) return false;
+
+        $options = get_option('vitapro_appointments_settings', array());
+        $send_emails = isset($options['send_email_notifications']) ? (bool)$options['send_email_notifications'] : true;
+        if (!$send_emails) return false;
+
+        $results = array();
+
         switch ($new_status) {
             case 'confirmed':
-                $this->send_customer_confirmation_email($appointment);
+                // O e-mail de confirmação geralmente é o mesmo de novo agendamento se não for auto-aprovado.
+                // Ou um e-mail específico de "Seu agendamento foi confirmado".
+                // Por enquanto, vamos assumir que new-booking-patient serve.
+                $subject_patient = sprintf(__('Appointment Confirmed - %s', 'vitapro-appointments-fse'), $appointment_data['service_name']);
+                $message_patient = $this->render_email_template('new-booking-patient', $appointment_data); // Pode precisar de um template 'booking-confirmed-patient'
+                $results['patient_confirmed'] = $this->send_email($appointment_data['patient_email'], $subject_patient, $message_patient);
                 break;
                 
             case 'cancelled':
-                $this->send_cancellation_emails($appointment);
+                $cancelled_by = current_user_can('manage_options') ? 'admin' : 'patient'; // Determinar quem cancelou
+                $appointment_data['cancelled_by'] = $cancelled_by;
+                $appointment_data['old_status'] = $old_status;
+
+                // Admin Notification
+                if (isset($options['enable_admin_notification']) && $options['enable_admin_notification']) {
+                    $admin_email = isset($options['email_admin_new_booking']) && !empty($options['email_admin_new_booking']) ? $options['email_admin_new_booking'] : get_option('admin_email');
+                    $subject_admin = sprintf(__('Appointment Cancelled - %s', 'vitapro-appointments-fse'), $appointment_data['service_name']);
+                    $message_admin = $this->render_email_template('cancellation-admin', $appointment_data);
+                    $results['admin_cancelled'] = $this->send_email($admin_email, $subject_admin, $message_admin);
+                }
+
+                // Patient Notification
+                if (!empty($appointment_data['patient_email'])) {
+                    $subject_patient = sprintf(__('Appointment Cancellation Confirmation - %s', 'vitapro-appointments-fse'), $appointment_data['service_name']);
+                    $message_patient = $this->render_email_template('cancellation-patient', $appointment_data);
+                    $results['patient_cancelled'] = $this->send_email($appointment_data['patient_email'], $subject_patient, $message_patient);
+                }
                 break;
                 
             case 'completed':
-                $this->send_completion_emails($appointment);
+                // Você pode querer enviar um e-mail de agradecimento ou pedido de feedback.
+                // if (!empty($appointment_data['patient_email'])) {
+                //     $subject_patient = sprintf(__('Appointment Completed - Thank You - %s', 'vitapro-appointments-fse'), $appointment_data['service_name']);
+                //     $message_patient = $this->render_email_template('completion-patient', $appointment_data); // Criar este template
+                //     $results['patient_completed'] = $this->send_email($appointment_data['patient_email'], $subject_patient, $message_patient);
+                // }
+                break;
+             default:
+                 // Para outros status, pode enviar um e-mail genérico de atualização de status
+                if (!empty($appointment_data['patient_email'])) {
+                    $status_labels = array(
+                        'pending'   => __('Pending', 'vitapro-appointments-fse'),
+                        'confirmed' => __('Confirmed', 'vitapro-appointments-fse'),
+                        'completed' => __('Completed', 'vitapro-appointments-fse'),
+                        'cancelled' => __('Cancelled', 'vitapro-appointments-fse'),
+                        'no_show'   => __('No Show', 'vitapro-appointments-fse'),
+                    );
+                    $appointment_data['new_status_label'] = isset($status_labels[$new_status]) ? $status_labels[$new_status] : ucfirst($new_status);
+
+                    $subject_patient = sprintf(__('Appointment Status Update - %s', 'vitapro-appointments-fse'), $appointment_data['service_name']);
+                    $message_patient = $this->render_email_template('status-update-patient', $appointment_data); // Criar este template genérico
+                    $results['patient_status_update'] = $this->send_email($appointment_data['patient_email'], $subject_patient, $message_patient);
+                }
                 break;
         }
-        
-        return true;
+        return $results;
     }
     
     /**
-     * Send admin new booking email
-     */
-    private function send_admin_new_booking_email($appointment) {
-        $email_settings = get_option('vitapro_appointments_email_settings', array());
-        
-        $to = isset($email_settings['admin_notification_email']) ? $email_settings['admin_notification_email'] : get_option('admin_email');
-        $subject = isset($email_settings['new_booking_admin_subject']) ? $email_settings['new_booking_admin_subject'] : __('New Appointment Booking', 'vitapro-appointments-fse');
-        
-        $template_data = $this->prepare_email_template_data($appointment);
-        $message = $this->load_email_template('new-booking-admin', $template_data);
-        
-        $headers = $this->get_email_headers();
-        
-        return wp_mail($to, $subject, $message, $headers);
-    }
-    
-    /**
-     * Send customer confirmation email
-     */
-    private function send_customer_confirmation_email($appointment) {
-        $email_settings = get_option('vitapro_appointments_email_settings', array());
-        
-        $to = $appointment['customer_email'];
-        $subject = isset($email_settings['new_booking_patient_subject']) ? $email_settings['new_booking_patient_subject'] : __('Appointment Confirmation', 'vitapro-appointments-fse');
-        
-        $template_data = $this->prepare_email_template_data($appointment);
-        $message = $this->load_email_template('new-booking-patient', $template_data);
-        
-        $headers = $this->get_email_headers();
-        
-        // Add calendar attachment
-        $ics_file = $this->generate_calendar_attachment($appointment);
-        $attachments = $ics_file ? array($ics_file) : array();
-        
-        $result = wp_mail($to, $subject, $message, $headers, $attachments);
-        
-        // Clean up temporary file
-        if ($ics_file && file_exists($ics_file)) {
-            unlink($ics_file);
-        }
-        
-        return $result;
-    }
-    
-    /**
-     * Send cancellation emails
-     */
-    private function send_cancellation_emails($appointment) {
-        $email_settings = get_option('vitapro_appointments_email_settings', array());
-        
-        // Send to admin
-        $admin_email = isset($email_settings['admin_notification_email']) ? $email_settings['admin_notification_email'] : get_option('admin_email');
-        $admin_subject = isset($email_settings['cancellation_admin_subject']) ? $email_settings['cancellation_admin_subject'] : __('Appointment Cancelled', 'vitapro-appointments-fse');
-        
-        $template_data = $this->prepare_email_template_data($appointment);
-        $admin_message = $this->load_email_template('cancellation-admin', $template_data);
-        
-        $headers = $this->get_email_headers();
-        wp_mail($admin_email, $admin_subject, $admin_message, $headers);
-        
-        // Send to customer
-        $customer_subject = isset($email_settings['cancellation_patient_subject']) ? $email_settings['cancellation_patient_subject'] : __('Appointment Cancellation Confirmation', 'vitapro-appointments-fse');
-        $customer_message = $this->load_email_template('cancellation-patient', $template_data);
-        
-        return wp_mail($appointment['customer_email'], $customer_subject, $customer_message, $headers);
-    }
-    
-    /**
-     * Send completion emails
-     */
-    private function send_completion_emails($appointment) {
-        $email_settings = get_option('vitapro_appointments_email_settings', array());
-        
-        $to = $appointment['customer_email'];
-        $subject = isset($email_settings['completion_patient_subject']) ? $email_settings['completion_patient_subject'] : __('Appointment Completed - Thank You', 'vitapro-appointments-fse');
-        
-        $template_data = $this->prepare_email_template_data($appointment);
-        $message = $this->load_email_template('completion-patient', $template_data);
-        
-        $headers = $this->get_email_headers();
-        
-        return wp_mail($to, $subject, $message, $headers);
-    }
-    
-    /**
-     * Schedule reminder email
-     */
-    private function schedule_reminder_email($appointment) {
-        $general_settings = get_option('vitapro_appointments_general_settings', array());
-        $reminder_hours = isset($general_settings['reminder_hours_before']) ? $general_settings['reminder_hours_before'] : 24;
-        
-        $appointment_datetime = strtotime($appointment['appointment_date'] . ' ' . $appointment['appointment_time']);
-        $reminder_time = $appointment_datetime - ($reminder_hours * 3600);
-        
-        // Only schedule if reminder time is in the future
-        if ($reminder_time > current_time('timestamp')) {
-            wp_schedule_single_event($reminder_time, 'vitapro_send_appointment_reminder', array($appointment['id']));
-        }
-    }
-    
-    /**
-     * Send reminder email
+     * Send reminder email (Este será chamado pelo Cron Job)
      */
     public function send_reminder_email($appointment_id) {
-        $appointment = $this->get_appointment_data($appointment_id);
-        
-        if (!$appointment || $appointment['status'] === 'cancelled') {
+        $appointment_data = $this->get_appointment_email_data($appointment_id);
+        if (!$appointment_data || $appointment_data['status_raw'] === 'cancelled' || $appointment_data['status_raw'] === 'completed') {
+            return false;
+        }
+
+        $options = get_option('vitapro_appointments_settings', array());
+        $send_emails = isset($options['send_email_notifications']) ? (bool)$options['send_email_notifications'] : true;
+        $enable_reminders = isset($options['enable_reminders']) ? (bool)$options['enable_reminders'] : false;
+
+        if (!$send_emails || !$enable_reminders || empty($appointment_data['patient_email'])) {
             return false;
         }
         
-        $email_settings = get_option('vitapro_appointments_email_settings', array());
+        $subject = sprintf(__('Appointment Reminder - %s', 'vitapro-appointments-fse'), $appointment_data['service_name']);
+        $message = $this->render_email_template('reminder-patient', $appointment_data);
         
-        $to = $appointment['customer_email'];
-        $subject = isset($email_settings['reminder_patient_subject']) ? $email_settings['reminder_patient_subject'] : __('Appointment Reminder', 'vitapro-appointments-fse');
-        
-        $template_data = $this->prepare_email_template_data($appointment);
-        $message = $this->load_email_template('reminder-patient', $template_data);
-        
-        $headers = $this->get_email_headers();
-        
-        return wp_mail($to, $subject, $message, $headers);
+        return $this->send_email($appointment_data['patient_email'], $subject, $message);
     }
     
     /**
-     * Get appointment data
+     * Get comprehensive appointment data for email templates.
      */
-    private function get_appointment_data($appointment_id) {
+    public function get_appointment_email_data($appointment_id) {
         global $wpdb;
+        // Usar a tabela customizada para buscar os dados do agendamento
         $table_name = $wpdb->prefix . 'vpa_appointments';
-        
         $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $appointment_id), ARRAY_A);
-        
+
         if (!$appointment) {
-            return false;
+            // Tentar buscar do post type como fallback se a tabela estiver vazia para um ID de post
+            $post = get_post($appointment_id);
+            if ($post && $post->post_type === 'vpa_appointment') {
+                 $appointment = array(
+                    'id' => $post->ID, // Mantém o ID do post
+                    'service_id' => get_post_meta($post->ID, '_vpa_appointment_service_id', true),
+                    'professional_id' => get_post_meta($post->ID, '_vpa_appointment_professional_id', true),
+                    'customer_name' => get_post_meta($post->ID, '_vpa_appointment_patient_name', true),
+                    'customer_email' => get_post_meta($post->ID, '_vpa_appointment_patient_email', true),
+                    'customer_phone' => get_post_meta($post->ID, '_vpa_appointment_patient_phone', true),
+                    'appointment_date' => get_post_meta($post->ID, '_vpa_appointment_date', true),
+                    'appointment_time' => get_post_meta($post->ID, '_vpa_appointment_time', true),
+                    'duration' => get_post_meta($post->ID, '_vpa_appointment_duration', true), // Pode não existir, pegar do serviço
+                    'status' => get_post_meta($post->ID, '_vpa_appointment_status', true),
+                    'notes' => $post->post_content, // Se as notas são o conteúdo do post
+                    'custom_fields' => get_post_meta($post->ID, '_vpa_appointment_custom_fields_data', true), // Se for meta
+                 );
+            } else {
+                return false;
+            }
         }
         
-        // Add additional data
-        $appointment['service_title'] = get_the_title($appointment['service_id']);
-        $appointment['professional_title'] = get_the_title($appointment['professional_id']);
-        $appointment['service_price'] = get_post_meta($appointment['service_id'], '_vpa_service_price', true);
-        $appointment['professional_email'] = get_post_meta($appointment['professional_id'], '_vpa_professional_email', true);
-        $appointment['professional_phone'] = get_post_meta($appointment['professional_id'], '_vpa_professional_phone', true);
-        
-        return $appointment;
-    }
-    
-    /**
-     * Prepare email template data
-     */
-    private function prepare_email_template_data($appointment) {
-        $general_settings = get_option('vitapro_appointments_general_settings', array());
-        
-        $date_format = get_option('date_format');
-        $time_format = get_option('time_format');
-        
+        $service = get_post($appointment['service_id']);
+        $professional = $appointment['professional_id'] ? get_post($appointment['professional_id']) : null;
+
+        $options = get_option('vitapro_appointments_settings', array()); // Usando get_option
+        $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
+        $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
+
+        $status_raw = $appointment['status'];
+        $status_labels = array(
+            'pending'   => __('Pending', 'vitapro-appointments-fse'),
+            'confirmed' => __('Confirmed', 'vitapro-appointments-fse'),
+            'completed' => __('Completed', 'vitapro-appointments-fse'),
+            'cancelled' => __('Cancelled', 'vitapro-appointments-fse'),
+            'no_show'   => __('No Show', 'vitapro-appointments-fse'),
+        );
+        $status_display = isset($status_labels[$status_raw]) ? $status_labels[$status_raw] : ucfirst($status_raw);
+
+        $custom_fields_display = array();
+        $defined_custom_fields = isset($options['custom_fields']) ? $options['custom_fields'] : array();
+        $appointment_custom_fields = !empty($appointment['custom_fields']) ? json_decode($appointment['custom_fields'], true) : array();
+        if (is_array($appointment_custom_fields) && !empty($defined_custom_fields)) {
+            foreach($defined_custom_fields as $field_id => $field_settings) {
+                if (isset($appointment_custom_fields[$field_id])) {
+                    $custom_fields_display[$field_id] = array(
+                        'label' => $field_settings['label'],
+                        'value' => $appointment_custom_fields[$field_id],
+                        'type'  => isset($field_settings['type']) ? $field_settings['type'] : 'text',
+                    );
+                }
+            }
+        }
+
+        $service_duration = !empty($appointment['duration']) ? $appointment['duration'] : $this->get_service_duration($appointment['service_id']);
+
+
         return array(
-            'appointment_id' => $appointment['id'],
-            'service_name' => $appointment['service_title'],
-            'professional_name' => $appointment['professional_title'],
-            'customer_name' => $appointment['customer_name'],
-            'customer_email' => $appointment['customer_email'],
-            'customer_phone' => $appointment['customer_phone'],
-            'appointment_date' => date_i18n($date_format, strtotime($appointment['appointment_date'])),
-            'appointment_time' => date_i18n($time_format, strtotime($appointment['appointment_time'])),
-            'appointment_status' => ucfirst($appointment['status']),
-            'appointment_notes' => $appointment['notes'],
-            'appointment_duration' => $appointment['duration'] . ' ' . __('minutes', 'vitapro-appointments-fse'),
-            'service_price' => !empty($appointment['service_price']) ? $general_settings['currency_symbol'] . $appointment['service_price'] : '',
-            'business_name' => isset($general_settings['business_name']) ? $general_settings['business_name'] : get_bloginfo('name'),
-            'business_phone' => isset($general_settings['business_phone']) ? $general_settings['business_phone'] : '',
-            'business_address' => isset($general_settings['business_address']) ? $general_settings['business_address'] : '',
-            'business_email' => isset($general_settings['business_email']) ? $general_settings['business_email'] : get_option('admin_email'),
-            'professional_email' => $appointment['professional_email'],
-            'professional_phone' => $appointment['professional_phone'],
-            'site_url' => home_url(),
-            'admin_url' => admin_url('admin.php?page=vitapro-appointments'),
-            'cancel_url' => $this->generate_cancel_url($appointment['id']),
-            'reschedule_url' => $this->generate_reschedule_url($appointment['id']),
+            'appointment_id'     => $appointment['id'],
+            'service_name'       => $service ? $service->post_title : __('Unknown Service', 'vitapro-appointments-fse'),
+            'professional_name'  => $professional ? $professional->post_title : __('Any available professional', 'vitapro-appointments-fse'),
+            'formatted_date'     => date_i18n($date_format, strtotime($appointment['appointment_date'])),
+            'formatted_time'     => date_i18n($time_format, strtotime($appointment['appointment_time'])),
+            'patient_name'       => $appointment['customer_name'],
+            'patient_email'      => $appointment['customer_email'],
+            'patient_phone'      => $appointment['customer_phone'],
+            'status'             => $status_display, // Para exibição
+            'status_raw'         => $status_raw,     // Para lógica interna
+            'site_name'          => get_bloginfo('name'),
+            'site_url'           => home_url(),
+            'custom_fields'      => $custom_fields_display, // Array formatado de campos customizados
+            'appointment_notes'  => $appointment['notes'],
+            'duration'           => $service_duration . ' ' . __('minutes', 'vitapro-appointments-fse'),
+            // Adicione quaisquer outros dados que seus templates possam precisar
         );
     }
     
     /**
-     * Load email template
+     * Render email template.
      */
-    private function load_email_template($template_name, $data) {
+    public function render_email_template( $template_name, $args = array() ) {
+        // Caminho para os templates dentro do plugin
         $template_path = VITAPRO_APPOINTMENTS_FSE_PATH . 'templates/email/' . $template_name . '.php';
         
-        if (file_exists($template_path)) {
-            ob_start();
-            extract($data);
-            include $template_path;
-            $content = ob_get_clean();
-        } else {
-            // Fallback to default template
-            $content = $this->get_default_email_template($template_name, $data);
+        // Permitir que temas sobrescrevam templates
+        $theme_template_path = get_stylesheet_directory() . '/vitapro-appointments/email/' . $template_name . '.php';
+        if (file_exists($theme_template_path)) {
+            $template_path = $theme_template_path;
         }
         
-        // Apply email header and footer
-        $email_settings = get_option('vitapro_appointments_email_settings', array());
-        $header = isset($email_settings['email_template_header']) ? $email_settings['email_template_header'] : '';
-        $footer = isset($email_settings['email_template_footer']) ? $email_settings['email_template_footer'] : '';
-        
-        $full_content = $header . $content . $footer;
-        
-        // Replace placeholders
-        foreach ($data as $key => $value) {
-            $full_content = str_replace('{' . $key . '}', $value, $full_content);
+        if (!file_exists($template_path)) {
+            // Log de erro ou fallback para um template padrão simples
+            error_log("VitaPro Email Template not found: {$template_name}");
+            return "Email template {$template_name} not found."; // Mensagem de erro simples
         }
-        
-        return $full_content;
+
+        ob_start();
+        // Definir $args como disponível para o template. Os templates usam extract($args).
+        // É mais seguro acessar $args['key'] dentro dos templates.
+        include $template_path; 
+        return ob_get_clean();
     }
     
     /**
-     * Get default email template
+     * Send email using WordPress mail function.
      */
-    private function get_default_email_template($template_name, $data) {
-        switch ($template_name) {
-            case 'new-booking-admin':
-                return $this->get_admin_new_booking_template($data);
-                
-            case 'new-booking-patient':
-                return $this->get_customer_confirmation_template($data);
-                
-            case 'reminder-patient':
-                return $this->get_reminder_template($data);
-                
-            case 'cancellation-admin':
-                return $this->get_admin_cancellation_template($data);
-                
-            case 'cancellation-patient':
-                return $this->get_customer_cancellation_template($data);
-                
-            case 'completion-patient':
-                return $this->get_completion_template($data);
-                
-            default:
-                return '';
+    public function send_email( $to, $subject, $message, $headers = array(), $attachments = array() ) {
+        $options = get_option('vitapro_appointments_settings', array()); // Usar get_option
+
+        $from_name = isset($options['email_from_name']) && !empty($options['email_from_name']) 
+                     ? $options['email_from_name'] 
+                     : get_bloginfo('name');
+        $from_email = isset($options['email_from_address']) && !empty($options['email_from_address']) 
+                      ? $options['email_from_address'] 
+                      : get_option('admin_email');
+
+        $default_headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $from_name . ' <' . $from_email . '>',
+            'Reply-To: ' . $from_name . ' <' . $from_email . '>', // Adicionar Reply-To
+        );
+
+        $final_headers = array_merge($default_headers, (array)$headers); // Garantir que $headers seja um array
+
+        // Integrar com configurações de SMTP se existirem (você precisaria de uma classe/função para isso)
+        // add_action('phpmailer_init', array($this, 'configure_smtp'));
+        
+        $sent = wp_mail($to, $subject, $message, $final_headers, $attachments);
+        
+        // remove_action('phpmailer_init', array($this, 'configure_smtp')); // Remover após o envio
+
+        if (!$sent) {
+            $this->log_email_error_details($to, $subject, $final_headers);
         }
+        return $sent;
     }
-    
+
     /**
-     * Get admin new booking template
+     * Log email error details.
      */
-    private function get_admin_new_booking_template($data) {
-        return '
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">New Appointment Booking</h2>
-            <p>A new appointment has been booked on your website.</p>
-            
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                <h3 style="margin-top: 0;">Appointment Details</h3>
-                <p><strong>Service:</strong> {service_name}</p>
-                <p><strong>Professional:</strong> {professional_name}</p>
-                <p><strong>Customer:</strong> {customer_name}</p>
-                <p><strong>Email:</strong> {customer_email}</p>
-                <p><strong>Phone:</strong> {customer_phone}</p>
-                <p><strong>Date:</strong> {appointment_date}</p>
-                <p><strong>Time:</strong> {appointment_time}</p>
-                <p><strong>Duration:</strong> {appointment_duration}</p>
-                <p><strong>Status:</strong> {appointment_status}</p>
-                ' . (!empty($data['appointment_notes']) ? '<p><strong>Notes:</strong> {appointment_notes}</p>' : '') . '
-            </div>
-            
-            <p><a href="{admin_url}" style="background: #0073aa; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px;">Manage Appointment</a></p>
-        </div>';
-    }
-    
-    /**
-     * Get customer confirmation template
-     */
-    private function get_customer_confirmation_template($data) {
-        return '
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Appointment Confirmation</h2>
-            <p>Dear {customer_name},</p>
-            <p>Thank you for booking an appointment with {business_name}. Your appointment has been confirmed.</p>
-            
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                <h3 style="margin-top: 0;">Your Appointment Details</h3>
-                <p><strong>Service:</strong> {service_name}</p>
-                <p><strong>Professional:</strong> {professional_name}</p>
-                <p><strong>Date:</strong> {appointment_date}</p>
-                <p><strong>Time:</strong> {appointment_time}</p>
-                <p><strong>Duration:</strong> {appointment_duration}</p>
-                ' . (!empty($data['service_price']) ? '<p><strong>Price:</strong> {service_price}</p>' : '') . '
-                ' . (!empty($data['appointment_notes']) ? '<p><strong>Notes:</strong> {appointment_notes}</p>' : '') . '
-            </div>
-            
-            <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h4 style="margin-top: 0;">Contact Information</h4>
-                <p><strong>{business_name}</strong></p>
-                ' . (!empty($data['business_phone']) ? '<p>Phone: {business_phone}</p>' : '') . '
-                ' . (!empty($data['business_address']) ? '<p>Address: {business_address}</p>' : '') . '
-            </div>
-            
-            <p>If you need to cancel or reschedule your appointment, please contact us as soon as possible.</p>
-            
-            <div style="margin: 30px 0;">
-                <a href="{cancel_url}" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px; margin-right: 10px;">Cancel Appointment</a>
-                <a href="{reschedule_url}" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px;">Reschedule</a>
-            </div>
-            
-            <p>We look forward to seeing you!</p>
-            <p>Best regards,<br>{business_name}</p>
-        </div>';
-    }
-    
-    /**
-     * Get reminder template
-     */
-    private function get_reminder_template($data) {
-        return '
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Appointment Reminder</h2>
-            <p>Dear {customer_name},</p>
-            <p>This is a friendly reminder about your upcoming appointment with {business_name}.</p>
-            
-            <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
-                <h3 style="margin-top: 0; color: #856404;">Appointment Tomorrow</h3>
-                <p><strong>Service:</strong> {service_name}</p>
-                <p><strong>Professional:</strong> {professional_name}</p>
-                <p><strong>Date:</strong> {appointment_date}</p>
-                <p><strong>Time:</strong> {appointment_time}</p>
-                <p><strong>Duration:</strong> {appointment_duration}</p>
-            </div>
-            
-            <p>Please arrive 10 minutes early for your appointment.</p>
-            
-            <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h4 style="margin-top: 0;">Contact Information</h4>
-                <p><strong>{business_name}</strong></p>
-                ' . (!empty($data['business_phone']) ? '<p>Phone: {business_phone}</p>' : '') . '
-                ' . (!empty($data['business_address']) ? '<p>Address: {business_address}</p>' : '') . '
-            </div>
-            
-            <p>If you need to cancel or reschedule, please contact us immediately.</p>
-            
-            <p>Thank you,<br>{business_name}</p>
-        </div>';
-    }
-    
-    /**
-     * Get admin cancellation template
-     */
-    private function get_admin_cancellation_template($data) {
-        return '
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #dc3545;">Appointment Cancelled</h2>
-            <p>An appointment has been cancelled.</p>
-            
-            <div style="background: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc3545;">
-                <h3 style="margin-top: 0;">Cancelled Appointment Details</h3>
-                <p><strong>Service:</strong> {service_name}</p>
-                <p><strong>Professional:</strong> {professional_name}</p>
-                <p><strong>Customer:</strong> {customer_name}</p>
-                <p><strong>Email:</strong> {customer_email}</p>
-                <p><strong>Date:</strong> {appointment_date}</p>
-                <p><strong>Time:</strong> {appointment_time}</p>
-            </div>
-            
-            <p><a href="{admin_url}" style="background: #0073aa; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px;">View All Appointments</a></p>
-        </div>';
-    }
-    
-    /**
-     * Get customer cancellation template
-     */
-    private function get_customer_cancellation_template($data) {
-        return '
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #dc3545;">Appointment Cancelled</h2>
-            <p>Dear {customer_name},</p>
-            <p>Your appointment has been successfully cancelled.</p>
-            
-            <div style="background: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc3545;">
-                <h3 style="margin-top: 0;">Cancelled Appointment</h3>
-                <p><strong>Service:</strong> {service_name}</p>
-                <p><strong>Professional:</strong> {professional_name}</p>
-                <p><strong>Date:</strong> {appointment_date}</p>
-                <p><strong>Time:</strong> {appointment_time}</p>
-            </div>
-            
-            <p>We\'re sorry to see you go. If you\'d like to book another appointment in the future, please don\'t hesitate to contact us.</p>
-            
-            <p>Best regards,<br>{business_name}</p>
-        </div>';
-    }
-    
-    /**
-     * Get completion template
-     */
-    private function get_completion_template($data) {
-        return '
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #28a745;">Thank You for Your Visit</h2>
-            <p>Dear {customer_name},</p>
-            <p>Thank you for visiting {business_name}. We hope you had a great experience with us.</p>
-            
-            <div style="background: #d4edda; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
-                <h3 style="margin-top: 0;">Completed Appointment</h3>
-                <p><strong>Service:</strong> {service_name}</p>
-                <p><strong>Professional:</strong> {professional_name}</p>
-                <p><strong>Date:</strong> {appointment_date}</p>
-                <p><strong>Time:</strong> {appointment_time}</p>
-            </div>
-            
-            <p>We would love to hear about your experience. Please consider leaving us a review or feedback.</p>
-            
-            <p>If you need to book another appointment, please don\'t hesitate to contact us.</p>
-            
-            <p>Thank you for choosing {business_name}!</p>
-            <p>Best regards,<br>{business_name}</p>
-        </div>';
-    }
-    
-    /**
-     * Get email headers
-     */
-    private function get_email_headers() {
-        $email_settings = get_option('vitapro_appointments_email_settings', array());
-        
-        $from_name = isset($email_settings['from_name']) ? $email_settings['from_name'] : get_bloginfo('name');
-        $from_email = isset($email_settings['from_email']) ? $email_settings['from_email'] : get_option('admin_email');
-        
-        $headers = array();
-        $headers[] = 'Content-Type: text/html; charset=UTF-8';
-        $headers[] = 'From: ' . $from_name . ' <' . $from_email . '>';
-        
-        return $headers;
-    }
-    
-    /**
-     * Generate calendar attachment
-     */
-    private function generate_calendar_attachment($appointment) {
-        $start_datetime = strtotime($appointment['appointment_date'] . ' ' . $appointment['appointment_time']);
-        $end_datetime = $start_datetime + ($appointment['duration'] * 60);
-        
-        $ics_content = "BEGIN:VCALENDAR\r\n";
-        $ics_content .= "VERSION:2.0\r\n";
-        $ics_content .= "PRODID:-//VitaPro Appointments//EN\r\n";
-        $ics_content .= "BEGIN:VEVENT\r\n";
-        $ics_content .= "UID:" . $appointment['id'] . "@" . parse_url(home_url(), PHP_URL_HOST) . "\r\n";
-        $ics_content .= "DTSTAMP:" . gmdate('Ymd\THis\Z') . "\r\n";
-        $ics_content .= "DTSTART:" . gmdate('Ymd\THis\Z', $start_datetime) . "\r\n";
-        $ics_content .= "DTEND:" . gmdate('Ymd\THis\Z', $end_datetime) . "\r\n";
-        $ics_content .= "SUMMARY:" . $appointment['service_title'] . " - " . $appointment['professional_title'] . "\r\n";
-        $ics_content .= "DESCRIPTION:Appointment with " . $appointment['professional_title'] . " for " . $appointment['service_title'] . "\r\n";
-        
-        $general_settings = get_option('vitapro_appointments_general_settings', array());
-        if (!empty($general_settings['business_address'])) {
-            $ics_content .= "LOCATION:" . str_replace(array("\r", "\n"), ' ', $general_settings['business_address']) . "\r\n";
+    private function log_email_error_details($to, $subject, $headers) {
+        global $ts_mail_errors; // Variável global do WP para erros de e-mail
+        global $phpmailer; // Objeto PHPMailer
+
+        $error_message = 'VitaPro Appointments Email Error: Failed to send email.';
+        if (is_array($ts_mail_errors) && !empty($ts_mail_errors)) {
+            $error_message .= " WP Mail Errors: " . implode(", ", $ts_mail_errors);
         }
-        
-        $ics_content .= "END:VEVENT\r\n";
-        $ics_content .= "END:VCALENDAR\r\n";
-        
-        $temp_file = wp_upload_dir()['basedir'] . '/appointment-' . $appointment['id'] . '.ics';
-        file_put_contents($temp_file, $ics_content);
-        
-        return $temp_file;
+        if (isset($phpmailer) && is_object($phpmailer) && !empty($phpmailer->ErrorInfo)) {
+            $error_message .= " PHPMailer Error: " . $phpmailer->ErrorInfo;
+        }
+        $error_message .= " | To: {$to} | Subject: {$subject} | Headers: " . implode("\r\n", $headers);
+        error_log($error_message);
     }
     
     /**
-     * Generate cancel URL
-     */
-    private function generate_cancel_url($appointment_id) {
-        return add_query_arg(array(
-            'action' => 'cancel_appointment',
-            'appointment_id' => $appointment_id,
-            'nonce' => wp_create_nonce('cancel_appointment_' . $appointment_id)
-        ), home_url());
-    }
-    
-    /**
-     * Generate reschedule URL
-     */
-    private function generate_reschedule_url($appointment_id) {
-        return add_query_arg(array(
-            'action' => 'reschedule_appointment',
-            'appointment_id' => $appointment_id,
-            'nonce' => wp_create_nonce('reschedule_appointment_' . $appointment_id)
-        ), home_url());
-    }
-    
-    /**
-     * Log email error
+     * Log email error (hook wp_mail_failed)
      */
     public function log_email_error($wp_error) {
-        error_log('VitaPro Appointments Email Error: ' . $wp_error->get_error_message());
+        if ($wp_error instanceof WP_Error) {
+            $error_messages = $wp_error->get_error_messages();
+            error_log('VitaPro Appointments WP_Mail Failed: ' . implode('; ', $error_messages));
+        }
     }
+
+    // public function configure_smtp($phpmailer) {
+    //     // Adicionar lógica de configuração SMTP aqui se necessário
+    //     // $options = get_option('vitapro_smtp_settings');
+    //     // if ($options['enabled']) {
+    //     // $phpmailer->isSMTP();
+    //     // $phpmailer->Host = $options['host'];
+    //     // ...
+    //     // }
+    // }
 }

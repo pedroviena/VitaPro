@@ -1,7 +1,7 @@
 <?php
 /**
  * Frontend Actions
- * * Handles frontend actions for VitaPro Appointments FSE.
+ * Handles frontend actions for VitaPro Appointments FSE.
  */
 
 if (!defined('ABSPATH')) {
@@ -10,12 +10,18 @@ if (!defined('ABSPATH')) {
 
 class VitaPro_Appointments_FSE_Frontend_Actions {
     
+    private $email_functions_instance; // Adicionado
+
     /**
      * Constructor
      */
     public function __construct() {
         add_action('template_redirect', array($this, 'handle_frontend_appointment_actions'));
         add_action('wp', array($this, 'maybe_display_frontend_messages'));
+
+        if (class_exists('VitaPro_Appointments_FSE_Email_Functions')) { // Instanciar Email Functions
+            $this->email_functions_instance = new VitaPro_Appointments_FSE_Email_Functions();
+        }
     }
 
     /**
@@ -39,6 +45,7 @@ class VitaPro_Appointments_FSE_Frontend_Actions {
      * Process patient appointment cancellation.
      */
     private function process_patient_cancellation() {
+        // ... (lógica de verificação de nonce, appointment, permissão, etc. permanece a mesma) ...
         if (!isset($_GET['appointment_id']) || !isset($_GET['nonce'])) {
             return;
         }
@@ -46,52 +53,60 @@ class VitaPro_Appointments_FSE_Frontend_Actions {
         $appointment_id = absint($_GET['appointment_id']);
         $nonce = sanitize_text_field($_GET['nonce']);
 
-        // Verify nonce
         if (!wp_verify_nonce($nonce, 'cancel_appointment_' . $appointment_id)) {
             wp_die(__('Security check failed.', 'vitapro-appointments-fse'));
         }
 
-        // Check if appointment exists
-        $appointment = get_post($appointment_id);
-        if (!$appointment || $appointment->post_type !== 'vpa_appointment') {
+        $appointment = get_post($appointment_id); // Ou buscar da sua tabela customizada
+        if (!$appointment || ($appointment->post_type !== 'vpa_appointment' && !$this->get_appointment_from_custom_table($appointment_id) )) {
             wp_die(__('Appointment not found.', 'vitapro-appointments-fse'));
         }
+        
+        // Se estiver usando a tabela customizada, pegue os dados dela.
+        $appointment_data_from_table = $this->get_appointment_from_custom_table($appointment_id);
+        $patient_email_meta = $appointment_data_from_table ? $appointment_data_from_table->customer_email : get_post_meta($appointment_id, '_vpa_appointment_patient_email', true);
+        $old_status_meta = $appointment_data_from_table ? $appointment_data_from_table->status : get_post_meta($appointment_id, '_vpa_appointment_status', true);
 
-        // Check if cancellation is allowed
-        // Supondo que vitapro_can_patient_cancel_appointment é uma função helper global ou de outra classe
-        // Se for desta classe, seria $this->can_patient_cancel_appointment()
+
+        // Idealmente, vitapro_can_patient_cancel_appointment seria um método de Availability_Logic ou desta classe.
         if (!function_exists('vitapro_can_patient_cancel_appointment') || !vitapro_can_patient_cancel_appointment($appointment_id)) {
-             // Se a função estiver em 'includes/common/helpers.php', ela deve estar carregada
-            // Se não, você precisará garantir que ela esteja acessível ou movê-la para esta classe.
-            // Por enquanto, vamos assumir que ela está disponível globalmente.
-             wp_die(__('This appointment cannot be cancelled.', 'vitapro-appointments-fse'));
+             wp_die(__('This appointment cannot be cancelled at this time.', 'vitapro-appointments-fse'));
         }
 
-
-        // Check if user has permission
-        $patient_email = get_post_meta($appointment_id, '_vpa_appointment_patient_email', true);
         $current_user = wp_get_current_user();
-        
         $has_permission = false;
-        if (is_user_logged_in() && $current_user->user_email === $patient_email) {
+        if (is_user_logged_in() && $current_user->user_email === $patient_email_meta) {
             $has_permission = true;
         }
+        // Adicionar lógica para link de cancelamento anônimo se necessário (com token seguro)
 
         if (!$has_permission) {
             wp_die(__('You do not have permission to cancel this appointment.', 'vitapro-appointments-fse'));
         }
 
-        $old_status = get_post_meta($appointment_id, '_vpa_appointment_status', true);
+        // Atualizar na tabela customizada
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'vpa_appointments';
+        $wpdb->update(
+            $table_name,
+            array('status' => 'cancelled', 'updated_at' => current_time('mysql', 1)),
+            array('id' => $appointment_id) // Assumindo que o ID do post é o ID da tabela
+        );
+        // E também no post meta se você ainda usa CPT para alguma coisa
         update_post_meta($appointment_id, '_vpa_appointment_status', 'cancelled');
 
-        // Send cancellation emails
-        // Supondo que vitapro_send_cancellation_emails é uma função helper global ou de outra classe (provavelmente email-functions)
-        if (function_exists('vitapro_send_cancellation_emails')) {
-            vitapro_send_cancellation_emails($appointment_id, 'patient', $old_status);
-        }
 
+        // A classe VitaPro_Appointments_FSE_Email_Functions já escuta a ação 'vitapro_appointment_status_changed'.
+        // O do_action abaixo deve ser suficiente para disparar os e-mails de cancelamento.
+        do_action('vitapro_appointment_status_changed', $appointment_id, 'cancelled', $old_status_meta);
+        
+        // Remover a chamada direta de e-mail, se houver, para evitar duplicidade:
+        // $options = get_option('vitapro_appointments_settings', array());
+        // $send_emails = isset($options['send_email_notifications']) ? (bool)$options['send_email_notifications'] : true;
+        // if ($send_emails && $this->email_functions_instance) {
+        //    $this->email_functions_instance->send_status_change_emails($appointment_id, 'cancelled', $old_status_meta);
+        // }
 
-        // Set success message
         $redirect_url = add_query_arg(array(
             'vpa_message' => 'appointment_cancelled',
             'appointment_id' => $appointment_id,
@@ -100,6 +115,14 @@ class VitaPro_Appointments_FSE_Frontend_Actions {
         wp_redirect($redirect_url);
         exit;
     }
+    
+    // Função auxiliar para buscar da tabela customizada, se necessário
+    private function get_appointment_from_custom_table($appointment_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'vpa_appointments';
+        return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $appointment_id));
+    }
+
 
     /**
      * Maybe display frontend messages.
@@ -123,7 +146,7 @@ class VitaPro_Appointments_FSE_Frontend_Actions {
 
         switch ($message_type) {
             case 'appointment_cancelled':
-                $message = '<div class="vpa-message vpa-message-success">'; // Garanta que estas classes CSS existem em frontend.css
+                $message = '<div class="vpa-message vpa-message-success">';
                 $message .= '<p>' . __('Your appointment has been successfully cancelled. You will receive a confirmation email shortly.', 'vitapro-appointments-fse') . '</p>';
                 $message .= '</div>';
                 break;

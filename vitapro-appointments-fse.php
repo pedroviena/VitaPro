@@ -94,7 +94,7 @@ private function load_dependencies() {
         'includes/cpt/settings-page.php',     // Para a UI da página de configurações (VitaPro_Appointments_FSE_Settings_Page)
         'includes/class-blocks.php',
         'includes/class-ajax-handlers.php',    // Mantém a classe
-        'includes/class-email-functions.php',
+        'includes/class-email-functions.php', 
         'includes/class-availability-logic.php',
         'includes/common/helpers.php',          // Arquivo de helpers
         'includes/class-cron-jobs.php',

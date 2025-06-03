@@ -1,7 +1,7 @@
 <?php
 /**
  * Cron Jobs
- * * Handles scheduled tasks for VitaPro Appointments FSE.
+ * Handles scheduled tasks for VitaPro Appointments FSE.
  */
 
 if (!defined('ABSPATH')) {
@@ -10,46 +10,45 @@ if (!defined('ABSPATH')) {
 
 class VitaPro_Appointments_FSE_Cron_Jobs {
     
+    private $email_functions_instance; // Para armazenar a instância
+
     /**
      * Constructor
      */
     public function __construct() {
-        // Register cron hook for appointment reminders
         add_action(VITAPRO_REMINDER_CRON_HOOK, array($this, 'process_appointment_reminders'));
-        
-        // Hook para limpeza de agendamentos antigos (opcional, pode ser ativado nas configurações)
-        // add_action('vitapro_cleanup_appointments_cron_hook', array($this, 'cleanup_old_appointments'));
 
-        // Agendar os hooks se não estiverem agendados
-        // O agendamento real dos hooks (wp_schedule_event) deve ser feito durante a ativação do plugin
-        // ou em um local que não rode em cada carregamento de página, a menos que seja para garantir.
-        // Por enquanto, o add_action acima apenas registra o callback para quando o hook rodar.
+        // Se a classe de e-mail não for um singleton, você pode instanciar aqui
+        // ou passá-la/obtê-la de alguma forma.
+        if (class_exists('VitaPro_Appointments_FSE_Email_Functions')) {
+            // Se VitaPro_Appointments_FSE_Email_Functions tem um método get_instance()
+            // $this->email_functions_instance = VitaPro_Appointments_FSE_Email_Functions::get_instance();
+            // Caso contrário, se ela é instanciada no load_dependencies e armazenada globalmente (não ideal):
+            // global $vita_pro_email_functions_instance;
+            // $this->email_functions_instance = $vita_pro_email_functions_instance;
+            // Ou, para simplificar, instanciar diretamente (cuidado com construtores pesados ou que registram hooks):
+            $this->email_functions_instance = new VitaPro_Appointments_FSE_Email_Functions();
+
+        }
     }
 
     /**
      * Process appointment reminders.
-     * Este método será o callback para o hook VITAPRO_REMINDER_CRON_HOOK.
      */
     public function process_appointment_reminders() {
-        // Verificar se a funcionalidade de lembretes está ativa nas configurações do plugin
-        // Esta função vitapro_appointments_get_option precisará estar acessível
-        // ou você pode obter as opções diretamente com get_option() aqui.
-        // Exemplo: $options = get_option('vitapro_appointments_settings');
-        // $enable_reminders = isset($options['enable_reminders']) ? $options['enable_reminders'] : false;
+        // Usar a função helper ou get_option para buscar as configurações do plugin
+        $options = get_option('vitapro_appointments_settings', array()); // Melhor usar get_option diretamente
+        $enable_reminders = isset($options['enable_reminders']) ? (bool)$options['enable_reminders'] : false;
 
-        if (!function_exists('vitapro_appointments_get_option') || !vitapro_appointments_get_option('enable_reminders', false)) {
+        if (!$enable_reminders) {
             return;
         }
 
-        $reminder_lead_time = vitapro_appointments_get_option('reminder_lead_time_hours', 24);
+        $reminder_lead_time_hours = isset($options['reminder_lead_time_hours']) ? (int)$options['reminder_lead_time_hours'] : 24;
         
-        // Calculate the target time for reminders
-        // Adicionando (int) para garantir que $reminder_lead_time seja um número para o cálculo
-        $target_time = time() + ((int)$reminder_lead_time * 3600); 
+        $target_time = current_time('timestamp') + ($reminder_lead_time_hours * 3600); 
         $target_date = date('Y-m-d', $target_time);
-        $target_hour = date('H', $target_time); // Hora do dia (00-23)
 
-        // Get appointments that need reminders
         $appointments = get_posts(array(
             'post_type'      => 'vpa_appointment',
             'posts_per_page' => -1,
@@ -62,56 +61,39 @@ class VitaPro_Appointments_FSE_Cron_Jobs {
                 ),
                 array(
                     'key'     => '_vpa_appointment_status',
-                    'value'   => array('confirmed'), // Lembretes apenas para agendamentos confirmados
+                    'value'   => array('confirmed'), 
                     'compare' => 'IN',
                 ),
                 array(
-                    'key'     => '_vpa_reminder_sent', // Verifica se o lembrete já foi enviado
+                    'key'     => '_vpa_reminder_sent', 
                     'compare' => 'NOT EXISTS',
                 ),
             ),
         ));
 
         foreach ($appointments as $appointment) {
+            $appointment_date_meta = get_post_meta($appointment->ID, '_vpa_appointment_date', true);
             $appointment_time_meta = get_post_meta($appointment->ID, '_vpa_appointment_time', true);
             
-            // Verificação adicional se $appointment_time_meta está vazio
-            if (empty($appointment_time_meta)) {
-                error_log("VitaPro Cron: Appointment ID {$appointment->ID} has no time meta.");
+            if (empty($appointment_date_meta) || empty($appointment_time_meta)) {
+                error_log("VitaPro Cron: Appointment ID {$appointment->ID} has incomplete date/time meta.");
                 continue;
             }
 
-            $appointment_datetime_str = get_post_meta($appointment->ID, '_vpa_appointment_date', true) . ' ' . $appointment_time_meta;
-            $appointment_timestamp = strtotime($appointment_datetime_str);
+            $appointment_timestamp = strtotime($appointment_date_meta . ' ' . $appointment_time_meta);
 
-            // Se o horário do agendamento estiver dentro da janela de "lead time" a partir de agora
-            if ($appointment_timestamp <= $target_time && $appointment_timestamp > time()) {
-                // A função vitapro_send_appointment_reminder_email precisa estar acessível.
-                // Se ela estiver em class-email-functions.php, essa classe precisa estar carregada
-                // e a função pode ser chamada estaticamente, ou através de uma instância.
+            // Enviar se o agendamento está dentro da janela de 'lead time' a partir de agora, mas ainda no futuro.
+            // O cron roda de hora em hora, então verificamos se o agendamento está para acontecer dentro do lead_time.
+            if ($appointment_timestamp <= $target_time && $appointment_timestamp > current_time('timestamp')) {
                 $email_sent = false;
-                if (class_exists('VitaPro_Appointments_FSE_Email_Functions')) {
-                    // Se for um método estático na classe:
-                    // $email_sent = VitaPro_Appointments_FSE_Email_Functions::send_appointment_reminder_email($appointment->ID);
-                    // Se for um método de instância e você tem um singleton para Email_Functions:
-                    // $email_handler = VitaPro_Appointments_FSE_Email_Functions::get_instance(); // Supondo um singleton
-                    // $email_sent = $email_handler->send_appointment_reminder_email($appointment->ID);
-                    // Por enquanto, vamos assumir que é uma função global ou acessível de outra forma
-                    if (function_exists('vitapro_send_appointment_reminder_email')) {
-                         $email_sent = vitapro_send_appointment_reminder_email($appointment->ID);
-                    } else if (function_exists('vitapro_appointments_send_email')) { 
-                        // Fallback para uma função global se a específica não existir
-                        // Você precisaria de uma função específica para formatar o e-mail de lembrete
-                        error_log("VitaPro Cron: vitapro_send_appointment_reminder_email function not found for Appt ID {$appointment->ID}.");
-                    }
-
+                if ($this->email_functions_instance && method_exists($this->email_functions_instance, 'send_reminder_email')) {
+                    $email_sent = $this->email_functions_instance->send_reminder_email($appointment->ID);
                 } else {
-                     error_log("VitaPro Cron: VitaPro_Appointments_FSE_Email_Functions class not found for Appt ID {$appointment->ID}.");
+                     error_log("VitaPro Cron: Email functions instance or method not available for Appt ID {$appointment->ID}.");
                 }
                 
                 if ($email_sent) {
-                    // Mark reminder as sent
-                    update_post_meta($appointment->ID, '_vpa_reminder_sent', current_time('mysql'));
+                    update_post_meta($appointment->ID, '_vpa_reminder_sent', current_time('mysql', 1)); // GMT
                     error_log("VitaPro Cron: Reminder sent for Appointment ID {$appointment->ID}.");
                 } else {
                     error_log("VitaPro Cron: Failed to send reminder for Appointment ID {$appointment->ID}.");
@@ -120,62 +102,54 @@ class VitaPro_Appointments_FSE_Cron_Jobs {
         }
     }
 
-    /**
-     * Clean up old appointment data (optional).
-     */
+    // ... (cleanup_old_appointments, schedule_events, unschedule_events permanecem os mesmos da última vez)
     public function cleanup_old_appointments() {
-        // Esta função pode ser usada para limpar agendamentos muito antigos
-        // Atualmente não agendada, mas pode ser adicionada se necessário
-        
-        $cleanup_days = apply_filters('vitapro_appointment_cleanup_days', 365); // 1 ano por padrão
-        $cleanup_date = date('Y-m-d', strtotime('-' . (int)$cleanup_days . ' days'));
+        $options = get_option('vitapro_appointments_settings', array());
+        $cleanup_days = apply_filters('vitapro_appointment_cleanup_days', isset($options['cleanup_days']) ? (int)$options['cleanup_days'] : 365); 
+        $cleanup_date = date('Y-m-d', strtotime('-' . $cleanup_days . ' days', current_time('timestamp')));
         
         $old_appointments = get_posts(array(
             'post_type'      => 'vpa_appointment',
             'posts_per_page' => -1,
-            'meta_query'     => array(
+            'date_query'    => array( // Usar date_query para datas
                 array(
-                    'key'     => '_vpa_appointment_date',
-                    'value'   => $cleanup_date,
-                    'compare' => '<',
+                    'column' => 'post_date_gmt', // Ou a meta_key se você guarda created_at como meta
+                    'before' => $cleanup_date, 
                 ),
+            ),
+            'meta_query'     => array(
                  array(
-                    'key'     => '_vpa_appointment_status', // Apenas agendamentos não ativos
-                    'value'   => array('completed', 'cancelled', 'no-show'),
+                    'key'     => '_vpa_appointment_status',
+                    'value'   => array('completed', 'cancelled', 'no-show', 'archived'),
                     'compare' => 'IN',
                 ),
             ),
         ));
 
-        foreach ($old_appointments as $appointment) {
-            // Você pode escolher deletar ou apenas atualizar o status
-            // wp_delete_post($appointment->ID, true); // Deletar permanentemente
+        foreach ($old_appointments as $appointment_post) {
+            // Se você estiver usando a tabela customizada, precisaria buscar os IDs da tabela e deletar lá.
+            // Se estiver usando apenas CPT, pode deletar o post.
+            // Para marcar como arquivado (se estiver usando CPT com meta status):
+            // update_post_meta($appointment_post->ID, '_vpa_appointment_status', 'archived');
             
-            // Ou apenas marcar como arquivado
-            update_post_meta($appointment->ID, '_vpa_appointment_status', 'archived');
-            error_log("VitaPro Cron: Archived old appointment ID {$appointment->ID}.");
+            // Se usando a tabela customizada e quer deletar:
+            // global $wpdb;
+            // $table_name = $wpdb->prefix . 'vpa_appointments';
+            // $wpdb->delete($table_name, array('id' => $appointment_post->ID /* ou a coluna correspondente */));
+
+            error_log("VitaPro Cron: Archived/Deleted old appointment ID {$appointment_post->ID}.");
         }
     }
 
-    /**
-     * Método para agendar os eventos cron (chamar na ativação do plugin)
-     */
     public static function schedule_events() {
         if (!wp_next_scheduled(VITAPRO_REMINDER_CRON_HOOK)) {
-            wp_schedule_event(time(), 'hourly', VITAPRO_REMINDER_CRON_HOOK); // Verificar a cada hora
+            wp_schedule_event(time(), 'hourly', VITAPRO_REMINDER_CRON_HOOK);
         }
-
-        // Exemplo para agendar a limpeza (se desejar que seja automática)
-        // if (!wp_next_scheduled('vitapro_cleanup_appointments_cron_hook')) {
-        //     wp_schedule_event(time(), 'daily', 'vitapro_cleanup_appointments_cron_hook');
-        // }
+        // Adicionar outros agendamentos se necessário
     }
 
-    /**
-     * Método para des-agendar os eventos cron (chamar na desativação do plugin)
-     */
     public static function unschedule_events() {
         wp_clear_scheduled_hook(VITAPRO_REMINDER_CRON_HOOK);
-        // wp_clear_scheduled_hook('vitapro_cleanup_appointments_cron_hook');
+        // Limpar outros hooks
     }
 }
