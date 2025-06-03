@@ -1,0 +1,768 @@
+/**
+ * VitaPro Appointments FSE Admin Styles
+ */
+
+/* General Admin Styles */
+.vitapro-admin-wrapper {
+    max-width: 1200px;
+    margin: 20px 0;
+}
+
+.vitapro-admin-header {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.vitapro-admin-header h1 {
+    margin: 0 0 10px 0;
+    color: #23282d;
+    font-size: 24px;
+}
+
+.vitapro-admin-header p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Tab Navigation */
+.vpa-tab-nav {
+    margin-bottom: 20px;
+}
+
+.vpa-tab-link {
+    display: inline-block;
+    padding: 10px 15px;
+    margin-right: 5px;
+    background: #f1f1f1;
+    border: 1px solid #ccd0d4;
+    border-bottom: none;
+    text-decoration: none;
+    color: #555;
+    border-radius: 4px 4px 0 0;
+    transition: all 0.2s ease;
+}
+
+.vpa-tab-link:hover {
+    background: #e8e8e8;
+    color: #333;
+}
+
+.vpa-tab-link.nav-tab-active {
+    background: #fff;
+    color: #0073aa;
+    border-color: #ccd0d4;
+    position: relative;
+    z-index: 2;
+}
+
+/* Tab Content */
+.vpa-tab-content {
+    display: none;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 0 4px 4px 4px;
+    padding: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.vpa-tab-content.vpa-tab-active {
+    display: block;
+}
+
+/* Form Styles */
+.vpa-form-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.vpa-form-table th {
+    width: 200px;
+    padding: 15px 10px 15px 0;
+    text-align: left;
+    vertical-align: top;
+    font-weight: 600;
+    color: #23282d;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.vpa-form-table td {
+    padding: 15px 10px;
+    vertical-align: top;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.vpa-form-table input[type="text"],
+.vpa-form-table input[type="email"],
+.vpa-form-table input[type="number"],
+.vpa-form-table input[type="url"],
+.vpa-form-table input[type="time"],
+.vpa-form-table input[type="date"],
+.vpa-form-table select,
+.vpa-form-table textarea {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.vpa-form-table textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.vpa-form-table .description {
+    margin-top: 5px;
+    font-size: 13px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Input Groups */
+.vpa-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.vpa-input-group input {
+    flex: 1;
+    min-width: 100px;
+}
+
+.vpa-input-group label {
+    font-weight: normal;
+    margin: 0;
+}
+
+/* Duration Wrapper */
+.vpa-duration-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.vpa-duration-wrapper input {
+    width: 80px;
+}
+
+.vpa-duration-wrapper .vpa-duration-label {
+    font-size: 13px;
+    color: #666;
+}
+
+/* Image Upload */
+.vpa-image-upload-wrapper {
+    max-width: 400px;
+}
+
+.vpa-image-preview {
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    max-width: 200px;
+}
+
+.vpa-image-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.vpa-image-upload-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.vpa-upload-image-button,
+.vpa-remove-image-button {
+    padding: 8px 16px;
+    border: 1px solid #0073aa;
+    background: #0073aa;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.vpa-upload-image-button:hover {
+    background: #005a87;
+    border-color: #005a87;
+    color: #fff;
+}
+
+.vpa-remove-image-button {
+    background: #dc3232;
+    border-color: #dc3232;
+}
+
+.vpa-remove-image-button:hover {
+    background: #a00;
+    border-color: #a00;
+    color: #fff;
+}
+
+/* Working Hours */
+.vpa-working-hours-wrapper {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.vpa-working-hours-day {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.vpa-working-hours-day:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.vpa-working-hours-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.vpa-working-hours-header label {
+    font-weight: 600;
+    margin: 0;
+}
+
+.vpa-working-hours-toggle {
+    margin: 0;
+}
+
+.vpa-time-slots-container {
+    margin-left: 30px;
+}
+
+.vpa-time-slot-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.vpa-time-slot-row input[type="time"] {
+    width: 120px;
+}
+
+.vpa-time-slot-separator {
+    font-weight: bold;
+    color: #666;
+}
+
+.vpa-add-time-slot,
+.vpa-remove-time-slot {
+    padding: 6px 12px;
+    border: 1px solid #0073aa;
+    background: #0073aa;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.vpa-add-time-slot:hover {
+    background: #005a87;
+    border-color: #005a87;
+    color: #fff;
+}
+
+.vpa-remove-time-slot {
+    background: #dc3232;
+    border-color: #dc3232;
+}
+
+.vpa-remove-time-slot:hover {
+    background: #a00;
+    border-color: #a00;
+    color: #fff;
+}
+
+/* Service Settings */
+.vpa-service-settings-wrapper {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.vpa-service-settings-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.vpa-service-checkbox {
+    margin: 0;
+}
+
+.vpa-service-settings-content {
+    margin-left: 30px;
+}
+
+.vpa-service-settings-row {
+    margin-bottom: 15px;
+}
+
+.vpa-service-settings-row:last-child {
+    margin-bottom: 0;
+}
+
+.vpa-service-settings-row label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.vpa-service-settings-row input {
+    width: 100%;
+    max-width: 200px;
+}
+
+/* Custom Fields */
+.vpa-custom-fields-wrapper {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.vpa-custom-field-row {
+    border: 1px solid #e1e1e1;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #f9f9f9;
+}
+
+.vpa-custom-field-row:last-child {
+    margin-bottom: 0;
+}
+
+.vpa-custom-field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.vpa-custom-field-title {
+    font-weight: 600;
+    color: #23282d;
+}
+
+.vpa-custom-field-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.vpa-custom-field-content .vpa-form-row {
+    margin-bottom: 0;
+}
+
+.vpa-custom-field-content label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #23282d;
+}
+
+.vpa-custom-field-content input,
+.vpa-custom-field-content select,
+.vpa-custom-field-content textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.vpa-field-options-row {
+    grid-column: 1 / -1;
+}
+
+.vpa-field-options-row textarea {
+    min-height: 60px;
+}
+
+.vpa-add-custom-field,
+.vpa-remove-custom-field {
+    padding: 8px 16px;
+    border: 1px solid #0073aa;
+    background: #0073aa;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.vpa-add-custom-field:hover {
+    background: #005a87;
+    border-color: #005a87;
+    color: #fff;
+}
+
+.vpa-remove-custom-field {
+    background: #dc3232;
+    border-color: #dc3232;
+}
+
+.vpa-remove-custom-field:hover {
+    background: #a00;
+    border-color: #a00;
+    color: #fff;
+}
+
+/* Holiday Management */
+.vpa-holidays-wrapper {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.vpa-holiday-row {
+    border: 1px solid #e1e1e1;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #f9f9f9;
+}
+
+.vpa-holiday-row:last-child {
+    margin-bottom: 0;
+}
+
+.vpa-holiday-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr auto;
+    gap: 15px;
+    align-items: end;
+}
+
+.vpa-holiday-content .vpa-form-row {
+    margin-bottom: 0;
+}
+
+.vpa-holiday-content label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #23282d;
+}
+
+.vpa-holiday-content input,
+.vpa-holiday-content textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.vpa-add-holiday,
+.vpa-remove-holiday {
+    padding: 8px 16px;
+    border: 1px solid #0073aa;
+    background: #0073aa;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.vpa-add-holiday:hover {
+    background: #005a87;
+    border-color: #005a87;
+    color: #fff;
+}
+
+.vpa-remove-holiday {
+    background: #dc3232;
+    border-color: #dc3232;
+}
+
+.vpa-remove-holiday:hover {
+    background: #a00;
+    border-color: #a00;
+    color: #fff;
+}
+
+/* Appointment Management */
+.vpa-appointment-meta-wrapper {
+    background: #fff;
+    border: 1px solid #e1e1e1;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.vpa-appointment-status-wrapper {
+    margin-bottom: 20px;
+}
+
+.vpa-appointment-status-wrapper select {
+    width: 200px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.vpa-appointment-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.vpa-appointment-details-section h4 {
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e1e1e1;
+    color: #23282d;
+}
+
+.vpa-appointment-details-section .vpa-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.vpa-appointment-details-section .vpa-detail-row:last-child {
+    border-bottom: none;
+}
+
+.vpa-appointment-details-section .vpa-detail-label {
+    font-weight: 600;
+    color: #555;
+}
+
+.vpa-appointment-details-section .vpa-detail-value {
+    color: #23282d;
+}
+
+/* Status Badges */
+.vpa-status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.vpa-status-pending {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.vpa-status-confirmed {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.vpa-status-cancelled {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.vpa-status-completed {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+/* Block Editor Styles */
+.vpa-block-preview {
+    border: 2px dashed #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    background: #f9f9f9;
+}
+
+.vpa-block-preview-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #23282d;
+}
+
+.vpa-block-preview-description {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.vpa-block-preview-settings {
+    text-align: left;
+    max-width: 400px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.vpa-block-preview-settings li {
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.vpa-block-preview-settings li:last-child {
+    margin-bottom: 0;
+}
+
+/* Utility Classes */
+.vpa-hidden {
+    display: none !important;
+}
+
+.vpa-text-center {
+    text-align: center;
+}
+
+.vpa-text-right {
+    text-align: right;
+}
+
+.vpa-mb-10 {
+    margin-bottom: 10px;
+}
+
+.vpa-mb-15 {
+    margin-bottom: 15px;
+}
+
+.vpa-mb-20 {
+    margin-bottom: 20px;
+}
+
+.vpa-mt-10 {
+    margin-top: 10px;
+}
+
+.vpa-mt-15 {
+    margin-top: 15px;
+}
+
+.vpa-mt-20 {
+    margin-top: 20px;
+}
+
+/* Loading States */
+.vpa-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.vpa-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: vpa-spin 1s linear infinite;
+}
+
+@keyframes vpa-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error States */
+.vpa-input-error {
+    border-color: #dc3232 !important;
+    box-shadow: 0 0 0 1px #dc3232;
+}
+
+.vpa-error-message {
+    color: #dc3232;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/* Success States */
+.vpa-success-message {
+    color: #46b450;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .vpa-form-table th,
+    .vpa-form-table td {
+        display: block;
+        width: 100%;
+        padding: 10px 0;
+    }
+    
+    .vpa-form-table th {
+        border-bottom: none;
+        padding-bottom: 5px;
+    }
+    
+    .vpa-appointment-details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .vpa-custom-field-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .vpa-holiday-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .vpa-time-slot-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .vpa-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

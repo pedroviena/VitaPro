@@ -1,0 +1,162 @@
+<?php
+/**
+ * Registers the Service Custom Post Type.
+ *
+ * @package VitaPro_Appointments_FSE
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+/**
+ * Register Service Custom Post Type.
+ */
+function vitapro_appointments_register_service_cpt() {
+    $labels = array(
+        'name'                  => _x( 'Services', 'Post Type General Name', 'vitapro-appointments-fse' ),
+        'singular_name'         => _x( 'Service', 'Post Type Singular Name', 'vitapro-appointments-fse' ),
+        'menu_name'             => __( 'Services', 'vitapro-appointments-fse' ),
+        'name_admin_bar'        => __( 'Service', 'vitapro-appointments-fse' ),
+        'archives'              => __( 'Service Archives', 'vitapro-appointments-fse' ),
+        'attributes'            => __( 'Service Attributes', 'vitapro-appointments-fse' ),
+        'parent_item_colon'     => __( 'Parent Service:', 'vitapro-appointments-fse' ),
+        'all_items'             => __( 'All Services', 'vitapro-appointments-fse' ),
+        'add_new_item'          => __( 'Add New Service', 'vitapro-appointments-fse' ),
+        'add_new'               => __( 'Add New', 'vitapro-appointments-fse' ),
+        'new_item'              => __( 'New Service', 'vitapro-appointments-fse' ),
+        'edit_item'             => __( 'Edit Service', 'vitapro-appointments-fse' ),
+        'update_item'           => __( 'Update Service', 'vitapro-appointments-fse' ),
+        'view_item'             => __( 'View Service', 'vitapro-appointments-fse' ),
+        'view_items'            => __( 'View Services', 'vitapro-appointments-fse' ),
+        'search_items'          => __( 'Search Service', 'vitapro-appointments-fse' ),
+        'not_found'             => __( 'Not found', 'vitapro-appointments-fse' ),
+        'not_found_in_trash'    => __( 'Not found in Trash', 'vitapro-appointments-fse' ),
+        'featured_image'        => __( 'Featured Image', 'vitapro-appointments-fse' ),
+        'set_featured_image'    => __( 'Set featured image', 'vitapro-appointments-fse' ),
+        'remove_featured_image' => __( 'Remove featured image', 'vitapro-appointments-fse' ),
+        'use_featured_image'    => __( 'Use as featured image', 'vitapro-appointments-fse' ),
+        'insert_into_item'      => __( 'Insert into service', 'vitapro-appointments-fse' ),
+        'uploaded_to_this_item' => __( 'Uploaded to this service', 'vitapro-appointments-fse' ),
+        'items_list'            => __( 'Services list', 'vitapro-appointments-fse' ),
+        'items_list_navigation' => __( 'Services list navigation', 'vitapro-appointments-fse' ),
+        'filter_items_list'     => __( 'Filter services list', 'vitapro-appointments-fse' ),
+    );
+
+    $args = array(
+        'label'                 => __( 'Service', 'vitapro-appointments-fse' ),
+        'description'           => __( 'Services offered by the clinic', 'vitapro-appointments-fse' ),
+        'labels'                => $labels,
+        'supports'              => array( 'title', 'editor', 'thumbnail' ),
+        'hierarchical'          => false,
+        'public'                => true,
+        'show_ui'               => true,
+        'show_in_menu'          => 'vitapro-appointments',
+        'menu_position'         => 5,
+        'show_in_admin_bar'     => true,
+        'show_in_nav_menus'     => true,
+        'can_export'            => true,
+        'has_archive'           => false,
+        'exclude_from_search'   => false,
+        'publicly_queryable'    => true,
+        'capability_type'       => 'post',
+        'show_in_rest'          => true,
+    );
+
+    register_post_type( 'vpa_service', $args );
+}
+add_action( 'init', 'vitapro_appointments_register_service_cpt', 0 );
+
+/**
+ * Add meta boxes for Service CPT.
+ */
+function vitapro_add_service_meta_boxes() {
+    add_meta_box(
+        'vpa_service_details',
+        __( 'Service Details', 'vitapro-appointments-fse' ),
+        'vitapro_render_service_details_meta_box',
+        'vpa_service',
+        'normal',
+        'high'
+    );
+}
+add_action( 'add_meta_boxes', 'vitapro_add_service_meta_boxes' );
+
+/**
+ * Render Service Details meta box.
+ */
+function vitapro_render_service_details_meta_box( $post ) {
+    wp_nonce_field( 'vitapro_service_meta_box', 'vitapro_service_meta_box_nonce' );
+
+    $duration = get_post_meta( $post->ID, '_vpa_service_duration', true );
+    $price = get_post_meta( $post->ID, '_vpa_service_price', true );
+    $buffer_time = get_post_meta( $post->ID, '_vpa_service_buffer_time', true );
+
+    ?>
+    <table class="form-table">
+        <tr>
+            <th scope="row">
+                <label for="vpa_service_duration"><?php _e( 'Duration (minutes)', 'vitapro-appointments-fse' ); ?></label>
+            </th>
+            <td>
+                <input type="number" id="vpa_service_duration" name="vpa_service_duration" value="<?php echo esc_attr( $duration ); ?>" min="1" step="1" class="regular-text" />
+                <p class="description"><?php _e( 'How long does this service take?', 'vitapro-appointments-fse' ); ?></p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row">
+                <label for="vpa_service_price"><?php _e( 'Price', 'vitapro-appointments-fse' ); ?></label>
+            </th>
+            <td>
+                <input type="number" id="vpa_service_price" name="vpa_service_price" value="<?php echo esc_attr( $price ); ?>" min="0" step="0.01" class="regular-text" />
+                <p class="description"><?php _e( 'Optional: Service price for display purposes.', 'vitapro-appointments-fse' ); ?></p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row">
+                <label for="vpa_service_buffer_time"><?php _e( 'Buffer Time (minutes)', 'vitapro-appointments-fse' ); ?></label>
+            </th>
+            <td>
+                <input type="number" id="vpa_service_buffer_time" name="vpa_service_buffer_time" value="<?php echo esc_attr( $buffer_time ); ?>" min="0" step="1" class="regular-text" />
+                <p class="description"><?php _e( 'Additional time needed between appointments for preparation/cleanup.', 'vitapro-appointments-fse' ); ?></p>
+            </td>
+        </tr>
+    </table>
+    <?php
+}
+
+/**
+ * Save Service meta data.
+ */
+function vitapro_save_service_meta_data( $post_id ) {
+    if ( ! isset( $_POST['vitapro_service_meta_box_nonce'] ) ) {
+        return;
+    }
+
+    if ( ! wp_verify_nonce( $_POST['vitapro_service_meta_box_nonce'], 'vitapro_service_meta_box' ) ) {
+        return;
+    }
+
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+
+    if ( isset( $_POST['post_type'] ) && 'vpa_service' == $_POST['post_type'] ) {
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+    }
+
+    if ( isset( $_POST['vpa_service_duration'] ) ) {
+        update_post_meta( $post_id, '_vpa_service_duration', absint( $_POST['vpa_service_duration'] ) );
+    }
+
+    if ( isset( $_POST['vpa_service_price'] ) ) {
+        update_post_meta( $post_id, '_vpa_service_price', floatval( $_POST['vpa_service_price'] ) );
+    }
+
+    if ( isset( $_POST['vpa_service_buffer_time'] ) ) {
+        update_post_meta( $post_id, '_vpa_service_buffer_time', absint( $_POST['vpa_service_buffer_time'] ) );
+    }
+}
+add_action( 'save_post', 'vitapro_save_service_meta_data' );

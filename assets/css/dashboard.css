@@ -1,0 +1,481 @@
+/**
+ * VitaPro Appointments FSE Dashboard CSS
+ */
+
+/* Page Wrapper */
+.vpa-analytics-page,
+.vpa-calendar-page {
+    margin: 20px 20px 20px 0; /* Ajuste para não cobrir o menu do WP */
+}
+
+.vpa-page-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Date Range Selector */
+.vpa-date-range-selector {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#vpa-custom-date-range {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* KPI Cards */
+.vpa-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.vpa-kpi-card {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.vpa-kpi-icon {
+    font-size: 28px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.vpa-kpi-appointments .vpa-kpi-icon { background-color: #0073aa; }
+.vpa-kpi-revenue .vpa-kpi-icon { background-color: #46b450; }
+.vpa-kpi-conversion .vpa-kpi-icon { background-color: #ffb900; }
+.vpa-kpi-satisfaction .vpa-kpi-icon { background-color: #7e70c9; }
+
+
+.vpa-kpi-content {
+    flex-grow: 1;
+}
+
+.vpa-kpi-value {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.vpa-kpi-label {
+    font-size: 13px;
+    color: #50575e;
+    margin-bottom: 5px;
+}
+
+.vpa-kpi-change {
+    font-size: 12px;
+}
+
+.vpa-change-green { color: #46b450; }
+.vpa-change-red { color: #dc3232; }
+.vpa-change .dashicons {
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+
+/* Charts */
+.vpa-charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.vpa-chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.vpa-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.vpa-chart-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.vpa-chart-controls button {
+    margin-left: 5px;
+}
+
+/* Tables */
+.vpa-tables-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.vpa-table-container {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.vpa-table-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Calendar Page */
+.vpa-calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.vpa-calendar-filters,
+.vpa-calendar-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#vpa-calendar-container {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    margin-bottom: 20px;
+}
+
+/* FullCalendar specific overrides - você pode precisar ajustar isso */
+#vpa-fullcalendar .fc-toolbar-title {
+    font-size: 1.5em;
+}
+#vpa-fullcalendar .fc-button {
+    text-transform: capitalize;
+}
+#vpa-fullcalendar .fc-event {
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 0.85em;
+}
+
+.vpa-status-pending { background-color: #ffb900; border-color: #ffb900; color: #000; }
+.vpa-status-confirmed { background-color: #46b450; border-color: #46b450; color: #fff; }
+.vpa-status-completed { background-color: #7e8993; border-color: #7e8993; color: #fff; }
+.vpa-status-cancelled { background-color: #dc3232; border-color: #dc3232; color: #fff; }
+
+
+.vpa-calendar-legend {
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+
+.vpa-calendar-legend h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.vpa-legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.vpa-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+}
+
+.vpa-legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+/* Modal */
+.vpa-modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 100000; /* High z-index for WP admin */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.vpa-modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 0;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0,0,0,.5);
+}
+
+.vpa-modal-header {
+    padding: 15px 20px;
+    background-color: #f1f1f1;
+    border-bottom: 1px solid #ddd;
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vpa-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.vpa-modal-close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.vpa-modal-close:hover,
+.vpa-modal-close:focus {
+    color: black;
+    text-decoration: none;
+}
+
+.vpa-modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.vpa-modal-footer {
+    padding: 15px 20px;
+    background-color: #f1f1f1;
+    border-top: 1px solid #ddd;
+    text-align: right;
+    border-radius: 0 0 4px 4px;
+}
+
+.vpa-modal-footer .button {
+    margin-left: 10px;
+}
+
+/* Loading & Error States */
+.vpa-loading {
+    position: relative;
+    min-height: 100px; /* So the spinner is visible */
+}
+.vpa-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin-top: -12px;
+    margin-left: -12px;
+    border: 3px solid rgba(0, 115, 170, 0.2);
+    border-top-color: #0073aa;
+    border-radius: 50%;
+    animation: vpa-spin 0.8s linear infinite;
+}
+
+@keyframes vpa-spin {
+    to { transform: rotate(360deg); }
+}
+
+.vpa-error {
+    color: #dc3232;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px 15px;
+    border-radius: 4px;
+}
+
+/* Real-time Toggle (example, if you add one) */
+.vpa-realtime-controls {
+    margin-bottom: 20px;
+}
+
+/* Notifications & Toasts (example) */
+.vpa-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #32373c;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 100001;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+.vpa-toast.vpa-toast-show {
+    opacity: 1;
+    transform: translateY(0);
+}
+.vpa-toast-success { background-color: #46b450; }
+.vpa-toast-info { background-color: #0073aa; }
+.vpa-toast-error { background-color: #dc3232; }
+
+/* Notification Dropdown (conceptual - would need JS to populate) */
+.vpa-notification-bell {
+    position: relative;
+    /* Style the bell icon */
+}
+.vpa-notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    padding: 2px 5px;
+    line-height: 1;
+}
+.vpa-notification-dropdown {
+    display: none; /* Show with JS */
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 300px;
+    background: white;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+.vpa-notification-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+.vpa-notification-item:hover { background: #f9f9f9; }
+.vpa-notification-item.unread { font-weight: bold; }
+
+/* Toast Notifications (from dashboard.js) */
+.vpa-toast-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 320px;
+    background-color: #32373c;
+    color: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 100005; /* Ensure it's above WP admin elements */
+}
+
+.vpa-toast-notification.vpa-toast-show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.vpa-toast-icon {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.vpa-priority-info .vpa-toast-icon { background-color: #0073aa; }
+.vpa-priority-success .vpa-toast-icon { background-color: #46b450; }
+.vpa-priority-warning .vpa-toast-icon { background-color: #ffb900; color: #333; }
+.vpa-priority-error .vpa-toast-icon { background-color: #dc3232; }
+.vpa-priority-urgent .vpa-toast-icon { background-color: #cc0000; }
+
+
+.vpa-toast-content {
+    padding: 15px;
+    flex-grow: 1;
+}
+
+.vpa-toast-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.vpa-toast-message {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.vpa-toast-actions {
+    padding: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.vpa-toast-close {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+    line-height: 1;
+}
+.vpa-toast-close:hover {
+    color: #fff;
+}
