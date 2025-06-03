@@ -45,7 +45,7 @@ class VitaPro_Appointments_FSE_Cron_Jobs {
         $table = $wpdb->prefix . 'vpa_appointments';
 
         // Usar a função helper ou get_option para buscar as configurações do plugin
-        $options = get_option('vitapro_appointments_settings', array()); // Melhor usar get_option diretamente
+        $options = get_option('vitapro_appointments_settings', array());
         $enable_reminders = isset($options['enable_reminders']) ? (bool)$options['enable_reminders'] : false;
 
         if (!$enable_reminders) {

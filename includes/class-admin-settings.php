@@ -50,29 +50,7 @@ class VitaPro_Appointments_FSE_Admin_Settings {
      * @return void
      */
     public function add_settings_submenus() {
-        $parent_slug = 'vitapro-appointments';
-
-        // Submenu de Configurações Gerais
-        add_submenu_page(
-            $parent_slug,
-            esc_html__('Settings - VitaPro Appointments', 'vitapro-appointments-fse'),
-            esc_html__('Settings', 'vitapro-appointments-fse'),
-            'manage_options',
-            'vitapro-appointments-settings',
-            array($this, 'render_general_settings_page_callback')
-        );
-
-        // Submenu de Modelos de Email
-        add_submenu_page(
-            $parent_slug,
-            esc_html__('Email Templates - VitaPro Appointments', 'vitapro-appointments-fse'),
-            esc_html__('Email Templates', 'vitapro-appointments-fse'),
-            'manage_options',
-            'vitapro-appointments-email-templates',
-            array($this, 'render_email_templates_page_callback')
-        );
-
-        // Adicione outros submenus conforme necessário.
+        // Removido: submenus duplicados. Agora todos os submenus são criados na função principal add_admin_menu.
     }
 
     /**
@@ -100,12 +78,9 @@ class VitaPro_Appointments_FSE_Admin_Settings {
      * @return void
      */
     public function render_general_settings_page_callback() {
-        if (function_exists('vitapro_appointments_settings_page_render')) {
-            // Substitua por include de template se desejar
-            include VITAPRO_APPOINTMENTS_FSE_PATH . 'templates/admin/settings.php';
-        } else {
-            echo '<div class="wrap"><h1>' . esc_html__('Error: Settings page render function not found.', 'vitapro-appointments-fse') . '</h1></div>';
-        }
+        // Inclua o template da página de configurações.
+        // O template será responsável por chamar settings_fields, do_settings_sections e vitapro_render_custom_fields_ui.
+        include VITAPRO_APPOINTMENTS_FSE_PATH . 'templates/admin/settings.php';
     }
 
     /**

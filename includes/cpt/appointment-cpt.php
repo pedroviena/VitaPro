@@ -216,7 +216,7 @@ function vitapro_render_appointment_columns( $column, $post_id ) {
             echo $appointment->professional_id ? esc_html(get_the_title($appointment->professional_id)) : __('Any', 'vitapro-appointments-fse');
             break;
         case 'vpa_date_time':
-            $options = get_option('vitapro_appointments_main_settings', array());
+            $options = get_option('vitapro_appointments_settings', array()); // Unificado para a chave correta
             $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
             $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
             if ($appointment->appointment_date && $appointment->appointment_time) {

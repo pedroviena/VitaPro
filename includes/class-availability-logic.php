@@ -28,7 +28,11 @@ class VitaPro_Appointments_FSE_Availability_Logic {
      * AJAX Handler: Get available dates for a service/professional
      */
     public function ajax_get_available_dates() {
-        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'vitapro_appointments_nonce')) {
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        if (
+            ! $nonce ||
+            !wp_verify_nonce($nonce, VITAPRO_FRONTEND_NONCE)
+        ) {
             wp_send_json_error(array('message' => __('Security check failed', 'vitapro-appointments-fse')), 403);
             return;
         }
@@ -55,7 +59,11 @@ class VitaPro_Appointments_FSE_Availability_Logic {
      * AJAX Handler: Get professional availability for a specific date range
      */
     public function ajax_get_professional_availability() {
-        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'vitapro_appointments_nonce')) {
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        if (
+            ! $nonce ||
+            !wp_verify_nonce($nonce, VITAPRO_FRONTEND_NONCE)
+        ) {
             wp_send_json_error(array('message' => __('Security check failed', 'vitapro-appointments-fse')), 403);
             return;
         }
@@ -77,7 +85,11 @@ class VitaPro_Appointments_FSE_Availability_Logic {
      * AJAX Handler: Check if a specific time slot is available
      */
     public function ajax_check_slot_availability() {
-        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'vitapro_appointments_nonce')) {
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        if (
+            ! $nonce ||
+            !wp_verify_nonce($nonce, VITAPRO_FRONTEND_NONCE)
+        ) {
             wp_send_json_error(array('message' => __('Security check failed', 'vitapro-appointments-fse')), 403);
             return;
         }
@@ -146,7 +158,7 @@ class VitaPro_Appointments_FSE_Availability_Logic {
             return $available_slots;
         }
 
-        $options = get_option('vitapro_appointments_main_settings', array()); // Use get_option consistently
+        $options = get_option('vitapro_appointments_settings', array()); // Use get_option consistently
         $interval = isset($options['time_slot_interval']) ? (int)$options['time_slot_interval'] : 30;
         $buffer_time = (int)get_post_meta($service_id, '_vpa_service_buffer_time', true); // Buffer específico do serviço
         $total_duration_for_slot = $duration_needed + $buffer_time;
@@ -267,7 +279,7 @@ class VitaPro_Appointments_FSE_Availability_Logic {
     private function get_service_duration($service_id) {
         $duration = get_post_meta($service_id, '_vpa_service_duration', true);
         if (empty($duration) || !is_numeric($duration)) {
-            $options = get_option('vitapro_appointments_main_settings', array());
+            $options = get_option('vitapro_appointments_settings', array());
             return isset($options['default_appointment_duration']) ? (int)$options['default_appointment_duration'] : 60;
         }
         return (int)$duration;
@@ -328,7 +340,7 @@ class VitaPro_Appointments_FSE_Availability_Logic {
             'break_start' => '',
             'break_end'   => '',
         );
-        $options = get_option('vitapro_appointments_main_settings', array());
+        $options = get_option('vitapro_appointments_settings', array());
         if (isset($options['default_opening_time'])) $default_schedule['start'] = $options['default_opening_time'];
         if (isset($options['default_closing_time'])) $default_schedule['end'] = $options['default_closing_time'];
 

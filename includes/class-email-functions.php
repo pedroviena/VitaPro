@@ -208,7 +208,7 @@ class VitaPro_Appointments_FSE_Email_Functions {
         $service = get_post($appointment['service_id']);
         $professional = $appointment['professional_id'] ? get_post($appointment['professional_id']) : null;
 
-        $options = get_option('vitapro_appointments_main_settings', array());
+        $options = get_option('vitapro_appointments_settings', array());
         $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
         $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
 
@@ -290,8 +290,7 @@ class VitaPro_Appointments_FSE_Email_Functions {
      * Send email using WordPress mail function.
      */
     public function send_email( $to, $subject, $message, $headers = array(), $attachments = array() ) {
-        $options = get_option('vitapro_appointments_main_settings', array());
-
+        $options = get_option('vitapro_appointments_settings', array());
         $from_name = isset($options['email_from_name']) && !empty($options['email_from_name']) 
                      ? $options['email_from_name'] 
                      : get_bloginfo('name');

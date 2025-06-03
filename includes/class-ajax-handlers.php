@@ -51,9 +51,10 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
             wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
             return;
         }
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
         if (
-            !isset($_POST['nonce']) ||
-            !wp_verify_nonce(sanitize_key(wp_unslash($_POST['nonce'])), 'vpa_book_appointment_nonce')
+            ! $nonce ||
+            !( wp_verify_nonce($nonce, VITAPRO_FRONTEND_NONCE) || wp_verify_nonce($nonce, VITAPRO_ADMIN_NONCE) )
         ) {
             wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
         }
@@ -61,20 +62,74 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
         global $wpdb;
         $table = $wpdb->prefix . 'vpa_appointments';
 
+        // Validação de data e hora
+        $appointment_date = isset($_POST['appointment_date']) ? sanitize_text_field($_POST['appointment_date']) : '';
+        $appointment_time = isset($_POST['appointment_time']) ? sanitize_text_field($_POST['appointment_time']) : '';
+        $date_valid = preg_match('/^\d{4}-\d{2}-\d{2}$/', $appointment_date) && strtotime($appointment_date);
+        $time_valid = preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $appointment_time);
+
+        if (!$date_valid || !$time_valid) {
+            wp_send_json_error(__('Invalid date or time format. Please select a valid date and time.', 'vitapro-appointments-fse'));
+        }
+
+        // Sanitização e validação de campos personalizados
+        $custom_fields = array();
+        $defined_custom_fields = get_option('vitapro_appointments_settings', array());
+        $defined_custom_fields = isset($defined_custom_fields['custom_fields']) ? $defined_custom_fields['custom_fields'] : array();
+        foreach ($defined_custom_fields as $field) {
+            $field_key = 'custom_field_' . sanitize_key($field['name']);
+            if (isset($_POST[$field_key])) {
+                $value = $_POST[$field_key];
+                switch ($field['type']) {
+                    case 'email':
+                        $value = sanitize_email($value);
+                        if (!is_email($value)) $value = '';
+                        break;
+                    case 'tel':
+                        $value = preg_replace('/[^0-9+\s\-]/', '', $value);
+                        break;
+                    case 'textarea':
+                        $value = sanitize_textarea_field($value);
+                        break;
+                    case 'select':
+                    case 'radio':
+                        $value = sanitize_text_field($value);
+                        break;
+                    case 'checkbox':
+                        $value = $value ? 1 : 0;
+                        break;
+                    default:
+                        $value = sanitize_text_field($value);
+                }
+                // Validação obrigatória
+                if (!empty($field['required']) && empty($value)) {
+                    wp_send_json_error(sprintf(__('Field "%s" is required. Please fill in this field.', 'vitapro-appointments-fse'), $field['label']));
+                }
+                $custom_fields[$field['name']] = $value;
+            } elseif (!empty($field['required'])) {
+                wp_send_json_error(sprintf(__('Field "%s" is required.', 'vitapro-appointments-fse'), $field['label']));
+            }
+        }
+
         $data = array(
             'service_id'      => isset($_POST['service_id']) ? intval($_POST['service_id']) : 0,
             'professional_id' => isset($_POST['professional_id']) ? intval($_POST['professional_id']) : 0,
             'customer_name'   => isset($_POST['customer_name']) ? sanitize_text_field($_POST['customer_name']) : '',
             'customer_email'  => isset($_POST['customer_email']) ? sanitize_email($_POST['customer_email']) : '',
             'customer_phone'  => isset($_POST['customer_phone']) ? sanitize_text_field($_POST['customer_phone']) : '',
-            'appointment_date'=> isset($_POST['appointment_date']) ? sanitize_text_field($_POST['appointment_date']) : '',
-            'appointment_time'=> isset($_POST['appointment_time']) ? sanitize_text_field($_POST['appointment_time']) : '',
+            'appointment_date'=> $appointment_date,
+            'appointment_time'=> $appointment_time,
             'status'          => 'pending',
             'notes'           => isset($_POST['appointment_notes']) ? sanitize_textarea_field($_POST['appointment_notes']) : '',
             'created_at'      => current_time('mysql', 1),
             'updated_at'      => current_time('mysql', 1),
-            // ...custom_fields...
+            'custom_fields'   => !empty($custom_fields) ? wp_json_encode($custom_fields) : null,
         );
+
+        // Validação extra de e-mail
+        if (empty($data['customer_email']) || !is_email($data['customer_email'])) {
+            wp_send_json_error(__('A valid email address is required. Please enter your email.', 'vitapro-appointments-fse'));
+        }
 
         $wpdb->insert($table, $data);
         $appointment_id = $wpdb->insert_id;
@@ -91,7 +146,7 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
 
         // ...existing code...
         wp_send_json_success(array(
-            'message' => __('Appointment booked successfully!', 'vitapro-appointments-fse'),
+            'message' => __('Appointment booked successfully! You will receive a confirmation email soon.', 'vitapro-appointments-fse'),
             'appointment_id' => $appointment_id,
             'appointment_details' => $details_html,
             'status' => 'pending',
@@ -104,9 +159,10 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
             wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
             return;
         }
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
         if (
-            !isset($_POST['nonce']) ||
-            !wp_verify_nonce(sanitize_key(wp_unslash($_POST['nonce'])), 'vpa_cancel_appointment_nonce')
+            ! $nonce ||
+            !( wp_verify_nonce($nonce, VITAPRO_FRONTEND_NONCE) || wp_verify_nonce($nonce, VITAPRO_ADMIN_NONCE) )
         ) {
             wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
         }
@@ -147,9 +203,10 @@ class VitaPro_Appointments_FSE_Ajax_Handlers {
             wp_send_json_error(__('Insufficient permissions', 'vitapro-appointments-fse'), 403);
             return;
         }
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
         if (
-            !isset($_POST['nonce']) ||
-            !wp_verify_nonce(sanitize_key(wp_unslash($_POST['nonce'])), 'vpa_update_appointment_status_nonce')
+            ! $nonce ||
+            !( wp_verify_nonce($nonce, VITAPRO_FRONTEND_NONCE) || wp_verify_nonce($nonce, VITAPRO_ADMIN_NONCE) )
         ) {
             wp_send_json_error(__('Security check failed', 'vitapro-appointments-fse'), 403);
         }

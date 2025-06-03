@@ -29,6 +29,15 @@ define('VITAPRO_APPOINTMENTS_FSE_PATH', plugin_dir_path(__FILE__));
 define('VITAPRO_APPOINTMENTS_FSE_URL', plugin_dir_url(__FILE__));
 define('VITAPRO_REMINDER_CRON_HOOK', 'vitapro_process_appointment_reminders_cron');
 
+// Nonce padronizado para admin
+if (!defined('VITAPRO_ADMIN_NONCE')) {
+    define('VITAPRO_ADMIN_NONCE', 'vitapro_admin_nonce');
+}
+// Nonce padronizado para frontend
+if (!defined('VITAPRO_FRONTEND_NONCE')) {
+    define('VITAPRO_FRONTEND_NONCE', 'vitapro_frontend_nonce');
+}
+
 /**
  * Main plugin class
  */
@@ -38,6 +47,11 @@ class VitaPro_Appointments_FSE {
      * Plugin instance
      */
     private static $instance = null;
+
+    /**
+     * @var VitaPro_Appointments_FSE_Admin_Settings
+     */
+    public $admin_settings;
 
     /**
      * Get plugin instance
@@ -53,6 +67,14 @@ class VitaPro_Appointments_FSE {
      * Constructor
      */
     private function __construct() {
+        // Inicialize as dependências antes de registrar menus
+        $this->load_dependencies();
+
+        // Inicialize admin_settings ANTES de registrar menus
+        if (class_exists('VitaPro_Appointments_FSE_Admin_Settings')) {
+            $this->admin_settings = new VitaPro_Appointments_FSE_Admin_Settings();
+        }
+
         add_action('init', array($this, 'init'));
         add_action('plugins_loaded', array($this, 'load_textdomain'));
 
@@ -75,18 +97,18 @@ class VitaPro_Appointments_FSE {
         // Load dependencies safely
         $this->load_dependencies();
 
-        // Register post types
-        $this->register_post_types();
-
-        // Register taxonomies
-        $this->register_taxonomies();
+        // Garante o registro dos CPTs
+        if (class_exists('VitaPro_Appointments_FSE_Custom_Post_Types')) {
+            if (!isset($this->custom_post_types)) {
+                $this->custom_post_types = new VitaPro_Appointments_FSE_Custom_Post_Types();
+            }
+        }
     }
 
     /**
      * Load plugin dependencies
      */
     private function load_dependencies() {
-        // Define required files
         $required_files = array(
             'includes/class-custom-post-types.php',
             'includes/class-admin-settings.php', // Para adicionar menus e registrar settings
@@ -110,6 +132,12 @@ class VitaPro_Appointments_FSE {
             $file_path = VITAPRO_APPOINTMENTS_FSE_PATH . $file;
             if (file_exists($file_path)) {
                 require_once $file_path;
+            }
+        }
+        // Garante o registro dos CPTs no init
+        if (class_exists('VitaPro_Appointments_FSE_Custom_Post_Types')) {
+            if (!isset($this->custom_post_types)) {
+                $this->custom_post_types = new VitaPro_Appointments_FSE_Custom_Post_Types();
             }
         }
 
@@ -343,35 +371,155 @@ class VitaPro_Appointments_FSE {
      * Add admin menu
      */
     public function add_admin_menu() {
+        // Menu principal
         add_menu_page(
             __('VitaPro Appointments', 'vitapro-appointments-fse'),
-            __('VitaPro Appointments', 'vitapro-appointments-fse'),
+            __('Consultas VitaPro', 'vitapro-appointments-fse'),
             'manage_options',
             'vitapro-appointments',
-            array(VitaPro_Appointments_FSE_Overview_Page::get_instance(), 'display_overview_page'), // LINHA CORRIGIDA
+            '', // Callback vazio, pois o submenu 'overview' será o default
             'dashicons-calendar-alt',
-            2
+            26
         );
-
-        // Dashboard submenu
+        $order = 1;
+        // Overview (default)
         add_submenu_page(
             'vitapro-appointments',
-            __('Dashboard', 'vitapro-appointments-fse'),
-            __('Dashboard', 'vitapro-appointments-fse'),
+            __('Overview', 'vitapro-appointments-fse'),
+            __('Overview', 'vitapro-appointments-fse'),
             'manage_options',
             'vitapro-appointments',
-            array($this, 'display_dashboard_page')
+            array(VitaPro_Appointments_FSE_Overview_Page::get_instance(), 'display_overview_page'),
+            $order++
         );
-
-        // Settings submenu
+        // Appointments (CPT)
+        add_submenu_page(
+            'vitapro-appointments',
+            __('Appointments', 'vitapro-appointments-fse'),
+            __('Appointments', 'vitapro-appointments-fse'),
+            'manage_options',
+            'edit.php?post_type=vpa_appointment',
+            '',
+            $order++
+        );
+        // Services (CPT)
+        add_submenu_page(
+            'vitapro-appointments',
+            __('Services', 'vitapro-appointments-fse'),
+            __('Services', 'vitapro-appointments-fse'),
+            'manage_options',
+            'edit.php?post_type=vpa_service',
+            '',
+            $order++
+        );
+        // Professionals (CPT)
+        add_submenu_page(
+            'vitapro-appointments',
+            __('Professionals', 'vitapro-appointments-fse'),
+            __('Professionals', 'vitapro-appointments-fse'),
+            'manage_options',
+            'edit.php?post_type=vpa_professional',
+            '',
+            $order++
+        );
+        // Holidays (CPT)
+        add_submenu_page(
+            'vitapro-appointments',
+            __('Holidays', 'vitapro-appointments-fse'),
+            __('Holidays', 'vitapro-appointments-fse'),
+            'manage_options',
+            'edit.php?post_type=vpa_holiday',
+            '',
+            $order++
+        );
+        // Calendar View
+        if (function_exists('vitapro_render_calendar_page')) {
+            add_submenu_page(
+                'vitapro-appointments',
+                __('Calendar View', 'vitapro-appointments-fse'),
+                __('Calendar View', 'vitapro-appointments-fse'),
+                'manage_options',
+                'vitapro-appointments-calendar',
+                'vitapro_render_calendar_page',
+                $order++
+            );
+        }
+        // Analytics
+        $dashboard_class_file = VITAPRO_APPOINTMENTS_FSE_PATH . 'includes/class-dashboard.php';
+        if (file_exists($dashboard_class_file)) {
+            require_once $dashboard_class_file;
+            if (class_exists('VitaPro_Appointments_FSE_Dashboard_Page')) {
+                add_submenu_page(
+                    'vitapro-appointments',
+                    __('Analytics', 'vitapro-appointments-fse'),
+                    __('Analytics', 'vitapro-appointments-fse'),
+                    'manage_options',
+                    'vitapro-appointments-dashboard',
+                    array(VitaPro_Appointments_FSE_Dashboard_Page::get_instance(), 'display_dashboard_page'),
+                    $order++
+                );
+            }
+        }
+        // Reports
+        $reports_class_file = VITAPRO_APPOINTMENTS_FSE_PATH . 'includes/class-reports.php';
+        if (file_exists($reports_class_file)) {
+            require_once $reports_class_file;
+            if (class_exists('VitaPro_Appointments_FSE_Reports_Page')) {
+                add_submenu_page(
+                    'vitapro-appointments',
+                    __('Reports', 'vitapro-appointments-fse'),
+                    __('Reports', 'vitapro-appointments-fse'),
+                    'manage_options',
+                    'vitapro-appointments-reports',
+                    array(VitaPro_Appointments_FSE_Reports_Page::get_instance(), 'display_reports_page'),
+                    $order++
+                );
+            }
+        }
+        // Settings
         add_submenu_page(
             'vitapro-appointments',
             __('Settings', 'vitapro-appointments-fse'),
             __('Settings', 'vitapro-appointments-fse'),
             'manage_options',
             'vitapro-appointments-settings',
-            array($this, 'display_settings_page')
+            array($this->admin_settings, 'render_general_settings_page_callback'),
+            $order++
         );
+        // Email Templates
+        add_submenu_page(
+            'vitapro-appointments',
+            __('Email Templates', 'vitapro-appointments-fse'),
+            __('Email Templates', 'vitapro-appointments-fse'),
+            'manage_options',
+            'vitapro-appointments-email-templates',
+            array($this->admin_settings, 'render_email_templates_page_callback'),
+            $order++
+        );
+        // Audit Log
+        if (class_exists('VitaPro_Appointments_FSE_Audit_Log')) {
+            add_submenu_page(
+                'vitapro-appointments',
+                __('Audit Log', 'vitapro-appointments-fse'),
+                __('Audit Log', 'vitapro-appointments-fse'),
+                'manage_options',
+                'vitapro-appointments-audit-log',
+                array('VitaPro_Appointments_FSE_Audit_Log', 'display_audit_log_page'),
+                $order++
+            );
+        }
+        // Backup & Recovery
+        if (class_exists('VitaPro_Appointments_FSE_Backup_Recovery')) {
+            add_submenu_page(
+                'vitapro-appointments',
+                __('Backup & Recovery', 'vitapro-appointments-fse'),
+                __('Backup & Recovery', 'vitapro-appointments-fse'),
+                'manage_options',
+                'vitapro-appointments-backup',
+                array('VitaPro_Appointments_FSE_Backup_Recovery', 'display_backup_page'),
+                $order++
+            );
+        }
     }
 
     /**
@@ -492,10 +640,10 @@ class VitaPro_Appointments_FSE {
                 true
             );
 
-            // Localize script for AJAX
+            // Padronize o nonce para frontend
             wp_localize_script('vitapro-appointments-fse-frontend', 'vitaproAjax', array(
                 'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('vitapro_appointments_nonce'),
+                'nonce' => wp_create_nonce(VITAPRO_FRONTEND_NONCE),
                 'strings' => array(
                     'loading' => __('Loading...', 'vitapro-appointments-fse'),
                     'error' => __('An error occurred. Please try again.', 'vitapro-appointments-fse'),
@@ -704,32 +852,29 @@ class VitaPro_Appointments_FSE {
      */
     private function set_default_options() {
         $default_options = array(
-            'general_settings' => array(
-                'business_name' => get_bloginfo('name'),
-                'business_email' => get_option('admin_email'),
-                'business_phone' => '',
-                'business_address' => '',
-                'timezone' => get_option('timezone_string', 'UTC'),
-                'date_format' => get_option('date_format'),
-                'time_format' => get_option('time_format'),
-                'currency' => 'USD',
-                'currency_symbol' => '$',
-                'currency_position' => 'before',
-                'default_appointment_duration' => 60,
-                'booking_advance_time' => 24,
-                'cancellation_time_limit' => 24,
-                'max_appointments_per_day' => 10,
-                'require_login' => false,
-                'auto_confirm_appointments' => false,
-                'send_email_notifications' => true,
-                'send_sms_notifications' => false,
-            ),
+            // Padronize para vitapro_appointments_settings
+            'business_name' => get_bloginfo('name'),
+            'business_email' => get_option('admin_email'),
+            'business_phone' => '',
+            'business_address' => '',
+            'timezone' => get_option('timezone_string', 'UTC'),
+            'date_format' => get_option('date_format'),
+            'time_format' => get_option('time_format'),
+            'currency' => 'USD',
+            'currency_symbol' => '$',
+            'currency_position' => 'before',
+            'default_appointment_duration' => 60,
+            'booking_advance_time' => 24,
+            'cancellation_time_limit' => 24,
+            'max_appointments_per_day' => 10,
+            'require_login' => false,
+            'auto_confirm_appointments' => false,
+            'send_email_notifications' => true,
+            'send_sms_notifications' => false,
         );
 
-        foreach ($default_options as $option_name => $option_value) {
-            if (!get_option('vitapro_appointments_' . $option_name)) {
-                update_option('vitapro_appointments_' . $option_name, $option_value);
-            }
+        if (!get_option('vitapro_appointments_settings')) {
+            update_option('vitapro_appointments_settings', $default_options);
         }
     }
 }

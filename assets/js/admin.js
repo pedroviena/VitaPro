@@ -28,6 +28,7 @@
             this.initColorPicker();
             this.initTimePicker();
             this.initDatePicker();
+            this.initSettingsSaveHandler(); // Adicionado para inicializar o handler de salvar configurações
         }
 
         initTabs() {
@@ -574,35 +575,90 @@
             }
         }
 
-        // Exemplo de handler para salvar configurações:
-        $('#vpa-save-settings').on('click', function(e){
-            e.preventDefault();
-            var $btn = $(this);
-            $btn.prop('disabled', true);
-            var data = {
-                action: 'vpa_save_settings',
-                nonce: vpa_admin.nonce
-            };
-            // Colete todos os campos do formulário de settings
-            $('#vitapro-appointments-settings-form').find('input, select, textarea').each(function(){
-                var $el = $(this);
-                var name = $el.attr('name');
-                if (!name) return;
-                if ($el.is(':checkbox')) {
-                    data[name] = $el.is(':checked') ? $el.val() : '';
-                } else {
-                    data[name] = $el.val();
-                }
+        initSettingsSaveHandler() {
+            const self = this;
+            jQuery('#vpa-save-settings').on('click', function(e){
+                e.preventDefault();
+                var $btn = jQuery(this);
+                $btn.prop('disabled', true).addClass('vpa-btn-loading');
+                var data = {
+                    action: 'vpa_save_settings',
+                    nonce: vitaproAdmin.nonce
+                };
+                // Coleta todos os campos do formulário de settings
+                jQuery('#vitapro-appointments-settings-form').find('input, select, textarea').each(function(){
+                    var $el = jQuery(this);
+                    var name = $el.attr('name');
+                    if (!name) return;
+                    if ($el.is(':checkbox')) {
+                        data[name] = $el.is(':checked') ? $el.val() : '';
+                    } else if ($el.is(':radio')) {
+                        if ($el.is(':checked')) {
+                            data[name] = $el.val();
+                        }
+                    } else {
+                        data[name] = $el.val();
+                    }
+                });
+                // UI feedback: overlay loading
+                const $formArea = jQuery('.vpa-settings-content');
+                self.showLoading($formArea);
+                jQuery.post(ajaxurl, data, function(response){
+                    self.hideLoading($formArea);
+                    $btn.prop('disabled', false).removeClass('vpa-btn-loading');
+                    if (response.success) {
+                        self.showSuccessMessage(
+                            vitaproAdmin && vitaproAdmin.strings && vitaproAdmin.strings.settings_saved
+                                ? vitaproAdmin.strings.settings_saved
+                                : 'Settings saved successfully!',
+                            $formArea
+                        );
+                    } else {
+                        self.showError(
+                            response.data ||
+                            (vitaproAdmin && vitaproAdmin.strings && vitaproAdmin.strings.settings_save_error
+                                ? vitaproAdmin.strings.settings_save_error
+                                : 'Error saving settings.'),
+                            $formArea
+                        );
+                    }
+                }).fail(function(){
+                    self.hideLoading($formArea);
+                    $btn.prop('disabled', false).removeClass('vpa-btn-loading');
+                    self.showError(
+                        vitaproAdmin && vitaproAdmin.strings && vitaproAdmin.strings.ajax_comm_error
+                            ? vitaproAdmin.strings.ajax_comm_error
+                            : 'Communication error with server.',
+                        $formArea
+                    );
+                });
             });
-            $.post(ajaxurl, data, function(response){
-                if (response.success) {
-                    // Exiba mensagem de sucesso
-                } else {
-                    // Exiba mensagem de erro
-                }
-                $btn.prop('disabled', false);
-            });
-        });
+        }
+
+        showLoading($area) {
+            if ($area.find('.vpa-loading-overlay').length === 0) {
+                $area.append('<div class="vpa-loading-overlay"><div class="vpa-spinner"></div></div>');
+            }
+        }
+        hideLoading($area) {
+            $area.find('.vpa-loading-overlay').remove();
+        }
+        showSuccessMessage(message, $area) {
+            this._showMessage(message, 'success', $area);
+        }
+        showError(message, $area) {
+            this._showMessage(message, 'error', $area);
+        }
+        _showMessage(message, type, $area) {
+            this.clearMessages($area);
+            const msg = jQuery(`<div class="vpa-admin-message vpa-admin-message-${type}" role="alert" tabindex="0">${message}</div>`);
+            $area.prepend(msg);
+            msg.focus();
+            setTimeout(() => { msg.fadeOut(400, function(){ jQuery(this).remove(); }); }, 4000);
+        }
+        clearMessages($area) {
+            $area.find('.vpa-admin-message').remove();
+        }
 
         // --- Exemplo de uso em operações AJAX ---
         saveSettings() {
@@ -615,13 +671,29 @@
                 data: {/* ... */},
                 success: (response) => {
                     if (response.success) {
-                        this.showSuccessMessage('Configurações salvas com sucesso!', $area);
+                        this.showSuccessMessage(
+                            vitaproAdmin && vitaproAdmin.strings && vitaproAdmin.strings.settings_saved
+                                ? vitaproAdmin.strings.settings_saved
+                                : 'Settings saved successfully!',
+                            $area
+                        );
                     } else {
-                        this.showError(response.data || 'Erro ao salvar configurações.', $area);
+                        this.showError(
+                            response.data ||
+                            (vitaproAdmin && vitaproAdmin.strings && vitaproAdmin.strings.settings_save_error
+                                ? vitaproAdmin.strings.settings_save_error
+                                : 'Error saving settings.'),
+                            $area
+                        );
                     }
                 },
                 error: () => {
-                    this.showError('Erro de comunicação com o servidor.', $area);
+                    this.showError(
+                        vitaproAdmin && vitaproAdmin.strings && vitaproAdmin.strings.ajax_comm_error
+                            ? vitaproAdmin.strings.ajax_comm_error
+                            : 'Communication error with server.',
+                        $area
+                    );
                 },
                 complete: () => {
                     this.hideLoading($area);

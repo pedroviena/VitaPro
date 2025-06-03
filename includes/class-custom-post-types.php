@@ -64,10 +64,19 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
             'public' => true,
             'publicly_queryable' => true,
             'show_ui' => true,
-            'show_in_menu' => $menu_parent_slug, // Associado ao menu pai
+            'show_in_menu' => 'vitapro-appointments',
             'query_var' => true,
             'rewrite' => array('slug' => 'service'),
-            'capability_type' => 'post', // Ou um capability type customizado se necessário
+            'capability_type' => 'post',
+            'capabilities' => array(
+                'edit_post'          => 'manage_options',
+                'read_post'          => 'manage_options',
+                'delete_post'        => 'manage_options',
+                'edit_posts'         => 'manage_options',
+                'edit_others_posts'  => 'manage_options',
+                'publish_posts'      => 'manage_options',
+                'read_private_posts' => 'manage_options',
+            ),
             'has_archive' => true,
             'hierarchical' => false,
             'menu_position' => 10, // Ordem dentro do menu pai
@@ -94,10 +103,19 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
             'public' => true,
             'publicly_queryable' => true,
             'show_ui' => true,
-            'show_in_menu' => $menu_parent_slug,
+            'show_in_menu' => 'vitapro-appointments',
             'query_var' => true,
             'rewrite' => array('slug' => 'professional'),
             'capability_type' => 'post',
+            'capabilities' => array(
+                'edit_post'          => 'manage_options',
+                'read_post'          => 'manage_options',
+                'delete_post'        => 'manage_options',
+                'edit_posts'         => 'manage_options',
+                'edit_others_posts'  => 'manage_options',
+                'publish_posts'      => 'manage_options',
+                'read_private_posts' => 'manage_options',
+            ),
             'has_archive' => true,
             'hierarchical' => false,
             'menu_position' => 20,
@@ -124,10 +142,19 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
             'public' => false, // Geralmente agendamentos não são públicos
             'publicly_queryable' => false, // Não deve ser acessível via URL direta
             'show_ui' => true,
-            'show_in_menu' => $menu_parent_slug,
+            'show_in_menu' => 'vitapro-appointments',
             'query_var' => false, // Se publicly_queryable é false
             'rewrite' => false, // Se publicly_queryable é false
             'capability_type' => 'post', // Considere 'vpa_appointment' e mapeie capabilities
+            'capabilities' => array(
+                'edit_post'          => 'manage_options',
+                'read_post'          => 'manage_options',
+                'delete_post'        => 'manage_options',
+                'edit_posts'         => 'manage_options',
+                'edit_others_posts'  => 'manage_options',
+                'publish_posts'      => 'manage_options',
+                'read_private_posts' => 'manage_options',
+            ),
             'has_archive' => false,
             'hierarchical' => false,
             'menu_position' => 5, // Mais importante, aparece antes
@@ -154,10 +181,19 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
             'public' => false,
             'publicly_queryable' => false,
             'show_ui' => true,
-            'show_in_menu' => $menu_parent_slug,
+            'show_in_menu' => 'vitapro-appointments',
             'query_var' => false,
             'rewrite' => false,
             'capability_type' => 'post',
+            'capabilities' => array(
+                'edit_post'          => 'manage_options',
+                'read_post'          => 'manage_options',
+                'delete_post'        => 'manage_options',
+                'edit_posts'         => 'manage_options',
+                'edit_others_posts'  => 'manage_options',
+                'publish_posts'      => 'manage_options',
+                'read_private_posts' => 'manage_options',
+            ),
             'has_archive' => false,
             'hierarchical' => false,
             'menu_position' => 30,
@@ -226,7 +262,7 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
         switch ($column) {
             case 'price':
                 $price = get_post_meta($post_id, '_vpa_service_price', true);
-                $options = get_option('vitapro_appointments_main_settings', array());
+                $options = get_option('vitapro_appointments_settings', array());
                 $currency_symbol = isset($options['currency_symbol']) ? $options['currency_symbol'] : '$';
                 echo !empty($price) ? esc_html($currency_symbol . number_format_i18n(floatval($price), 2)) : '—';
                 break;
@@ -311,7 +347,7 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
                 echo $appointment->professional_id ? esc_html(get_the_title($appointment->professional_id)) : __('Any', 'vitapro-appointments-fse');
                 break;
             case 'vpa_date_time':
-                $options = get_option('vitapro_appointments_main_settings', array());
+                $options = get_option('vitapro_appointments_settings', array());
                 $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
                 $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
                 if ($appointment->appointment_date && $appointment->appointment_time) {
@@ -358,7 +394,7 @@ class VitaPro_Appointments_FSE_Custom_Post_Types {
         switch ($column) {
             case 'vpa_holiday_date':
                 $date = get_post_meta($post_id, '_vpa_holiday_date', true);
-                $options = get_option('vitapro_appointments_main_settings', array());
+                $options = get_option('vitapro_appointments_settings', array());
                 $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
                 echo $date ? esc_html(date_i18n($date_format, strtotime($date))) : '—';
                 break;

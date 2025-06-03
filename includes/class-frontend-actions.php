@@ -65,6 +65,7 @@ class VitaPro_Appointments_FSE_Frontend_Actions {
                 $message .= '<p>' . __('Your appointment has been successfully cancelled. You will receive a confirmation email shortly.', 'vitapro-appointments-fse') . '</p>';
                 $message .= '</div>';
                 break;
+            // Adicione outros tipos de mensagem conforme necessário
         }
 
         return $message . $content;

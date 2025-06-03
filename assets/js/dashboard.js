@@ -323,7 +323,7 @@
         .done(function(response) {
             if (response.success) {
                 charts.professionalPerformance = new Chart(ctx, {
-                    type: 'horizontalBar',
+                    type: 'bar', // Atualizado de 'horizontalBar' para 'bar' (Chart.js v3+)
                     data: {
                         labels: response.data.labels,
                         datasets: [{
@@ -335,6 +335,7 @@
                         }]
                     },
                     options: {
+                        indexAxis: 'y', // Faz o gráfico ser horizontal
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {

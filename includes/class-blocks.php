@@ -318,7 +318,7 @@ class VitaPro_Appointments_FSE_Blocks {
         $services = get_posts($args);
         
         if (empty($services)) {
-            return '<p>' . __('No services found.', 'vitapro-appointments-fse') . '</p>';
+            return '<p>' . __('No services found. Please check back later or contact support.', 'vitapro-appointments-fse') . '</p>';
         }
         
         ob_start();
@@ -346,7 +346,8 @@ class VitaPro_Appointments_FSE_Blocks {
                         <div class="vpa-service-price">
                             <?php
                             $price = get_post_meta($service->ID, '_vpa_service_price', true);
-                            $currency_symbol = get_option('vitapro_appointments_general_settings')['currency_symbol'] ?? '$';
+                            $currency_symbol = get_option('vitapro_appointments_settings', array());
+                            $currency_symbol = isset($currency_symbol['currency_symbol']) ? $currency_symbol['currency_symbol'] : '$';
                             echo !empty($price) ? esc_html($currency_symbol . $price) : __('Contact for pricing', 'vitapro-appointments-fse');
                             ?>
                         </div>
@@ -406,7 +407,7 @@ class VitaPro_Appointments_FSE_Blocks {
         $professionals = get_posts($args);
         
         if (empty($professionals)) {
-            return '<p>' . __('No professionals found.', 'vitapro-appointments-fse') . '</p>';
+            return '<p>' . __('No professionals found. Please check back later or contact support.', 'vitapro-appointments-fse') . '</p>';
         }
         
         ob_start();
@@ -569,7 +570,7 @@ class VitaPro_Appointments_FSE_Blocks {
         $appointments = $wpdb->get_results($wpdb->prepare($sql, $prepare_values));
 
         if (empty($appointments)) {
-            echo '<p>' . ($type === 'upcoming' ? __('No upcoming appointments.', 'vitapro-appointments-fse') : __('No past appointments.', 'vitapro-appointments-fse')) . '</p>';
+            echo '<p>' . ($type === 'upcoming' ? __('No upcoming appointments. Book your first appointment now!', 'vitapro-appointments-fse') : __('No past appointments.', 'vitapro-appointments-fse')) . '</p>';
             return;
         }
 
@@ -577,7 +578,7 @@ class VitaPro_Appointments_FSE_Blocks {
         foreach ($appointments as $appointment) {
             $service_title = get_the_title($appointment->service_id);
             $professional_title = get_the_title($appointment->professional_id);
-            $options = get_option('vitapro_appointments_main_settings', array());
+            $options = get_option('vitapro_appointments_settings', array());
             $date_format = isset($options['date_format']) ? $options['date_format'] : get_option('date_format');
             $time_format = isset($options['time_format']) ? $options['time_format'] : get_option('time_format');
             $formatted_date = date_i18n($date_format, strtotime($appointment->appointment_date));
@@ -616,7 +617,7 @@ class VitaPro_Appointments_FSE_Blocks {
             if ($type === 'upcoming' && $allow_cancellation && in_array($appointment->status, array('pending', 'confirmed'))) {
                 echo '<div class="vpa-appointment-actions">';
                 // Botão AJAX para cancelar
-                echo '<button type="button" class="vpa-btn vpa-btn-cancel" data-appointment-id="' . esc_attr($appointment->id) . '" data-nonce="' . esc_attr(wp_create_nonce('vpa_cancel_appointment_nonce')) . '">' . __('Cancel Appointment', 'vitapro-appointments-fse') . '</button>';
+                echo '<button type="button" class="vpa-btn vpa-btn-cancel" data-appointment-id="' . esc_attr($appointment->id) . '" data-nonce="' . esc_attr(wp_create_nonce(VITAPRO_FRONTEND_NONCE)) . '">' . __('Cancel Appointment', 'vitapro-appointments-fse') . '</button>';
                 echo '</div>';
             }
             
@@ -652,7 +653,8 @@ class VitaPro_Appointments_FSE_Blocks {
             
             $price = get_post_meta($service->ID, '_vpa_service_price', true);
             $duration = get_post_meta($service->ID, '_vpa_service_duration', true);
-            $currency_symbol = get_option('vitapro_appointments_general_settings')['currency_symbol'] ?? '$';
+            $currency_symbol = get_option('vitapro_appointments_settings', array());
+            $currency_symbol = isset($currency_symbol['currency_symbol']) ? $currency_symbol['currency_symbol'] : '$';
             
             echo '<div class="vpa-service-meta">';
             if (!empty($price)) {
@@ -716,7 +718,8 @@ class VitaPro_Appointments_FSE_Blocks {
      * Render custom fields
      */
     private function render_custom_fields() {
-        $custom_fields = get_option('vitapro_appointments_custom_fields', array());
+        $settings = get_option('vitapro_appointments_settings', array());
+        $custom_fields = isset($settings['custom_fields']) ? $settings['custom_fields'] : array();
         
         if (empty($custom_fields)) {
             return;
